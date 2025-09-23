@@ -3,10 +3,13 @@
 import fs from 'promise-fs';
 import YAML from 'yaml';
 import CSV from 'csv-string';
-import {isIterable, delay} from './utils';
-import { Interval } from './timeSteps';
+import {isIterable, delay, control_filter2} from './utils';
+import { Interval, interval2string } from './timeSteps';
 import Geometry from './geometry';
 import { Comma } from 'csv-string/dist/types';
+import setGlobal from './setGlobal'
+
+const g = setGlobal()
 
 type KeyValueTuple = [key: string, value: unknown];
 
@@ -14,18 +17,33 @@ type AnyClass = {
     toCSV?(): string
     valor?: string | Uint8Array | Buffer | number | number[]
     prototype?: string | string[]
-    create(): Promise<AnyClass>
+    create(): Promise<AnyClass|AnyClass[]>
 };
 
+interface WriteableModel {
+    toCSV?(): string
+    valor?: string | Uint8Array | Buffer | number | number[]
+    prototype?: string | string[]
+};
+
+
 interface ModelField {
-    foreign_key?: boolean
-    type: "string" | "object" | "number" | "boolean" | "geometry" | "integer"
+	child?: any;
+	class?: new () => void;
+    foreign_key?: boolean | {[x: string]: string}
+    type: "string" | "object" | "number" | "boolean" | "geometry" | "integer" | "timestamp" | "date"
     table?: string
     column?: string
     primary_key?: boolean
 }
 
-export async function writeModelToFile(model: AnyClass, output_file : string, output_format : string) {
+interface ClassModelField {
+	class: new () => void;
+	foreign_key: {[x: string]: any}
+	column: string
+}
+
+export async function writeModelToFile(model: WriteableModel, output_file : string, output_format : string) {
 	if(!model) {
 		throw("missing model")
 	}
@@ -79,7 +97,11 @@ interface ReadFileOptions {
     id_property?: string
 }
 
-export function readModelFromFile(model_class : AnyModel,input_file : string,input_format : string, options : ReadFileOptions = {}) {
+export function readModelFromFile(
+	model_class : AnyModel,
+	input_file : string,
+	input_format : string, 
+	options : ReadFileOptions = {}) {
 	const separator = options.separator ?? ","
 	if(!model_class) {
 		throw("missing model_class")
@@ -409,13 +431,13 @@ export default class baseModel {
 			if(!row as any instanceof this) {
 				row = new this(row)
 			}
-			rows.push(Object.keys(this._fields).filter(key=>(options.columns) ? options.columns.indexOf(key) >= 0 : true).map(key=>{
-				if(this._fields[key].type && (this._fields[key].type == "timestamp" || this._fields[key].type == "date")) {
-					return (row[key]) ? row[key].toISOString() : ""
+			for(const key of Object.keys(this._fields).filter(key=>(options.columns) ? options.columns.indexOf(key) >= 0 : true)) {
+				if(this._fields[key]!.type && (this._fields[key]!.type == "timestamp" || this._fields[key]!.type == "date")) {
+					rows.push((row[key]) ? row[key].toISOString() : "")
 				} else {
-					return row[key]
+					rows.push(row[key])
 				}
-			}))
+			}
 		}
 		return CSV.stringify(rows).replace(/\r\n$/,"")
 	}
@@ -426,19 +448,30 @@ export default class baseModel {
 	 * @param {string[]} options.columns - print only this columns
 	 * @returns {string} csv encoded string
 	 */
-	toCSV(options={}) {
+	toCSV(options: { header?: boolean; columns?: string[]; }={}): string {
 		const rows = []
-		if(options.header) {
+		if(options.header && options.columns) {
             rows.push((this.constructor as typeof baseModel).getCSVHeader(options.columns))
-        } 
-		rows.push(Object.keys((this.constructor as typeof baseModel)._fields).filter(key=>(options.columns) ? options.columns.indexOf(key) >= 0 : true).map(key=>{
-			if((this.constructor as typeof baseModel)._fields[key].type && ((this.constructor as typeof baseModel)._fields[key].type == "timestamp" || (this.constructor as typeof baseModel)._fields[key].type == "date")) {
-				return this[key].toISOString()
+        }
+		const row = [] 
+		for(const key of Object.keys((this.constructor as typeof baseModel)._fields).filter(key=>(options.columns) ? options.columns.indexOf(key) >= 0 : true)) {
+			if(key in this) {
+				const k = key as keyof this
+				const value = this.getOne(k)
+				if(value instanceof Date) {
+					row.push(value.toISOString() as string)
+				} else {
+					row.push(value as string)
+				}
 			} else {
-				return this[key]
+				throw new Error("_fields property " + key + " not defined in class")
 			}
-		}))
+		}
+		rows.push(row)
 		return CSV.stringify(rows).replace(/\r\n$/,"")
+	}
+	getOne<K extends keyof this>(key: K) : this[K] {
+		return this[key]
 	}
 	/**
 	 * 
@@ -482,7 +515,10 @@ export default class baseModel {
 		return new this(result)
 	}
 
-	build_insert_statement() {
+	build_insert_statement() : {
+		string: string;
+		params: any[];
+	}{
 		if(!(this.constructor as typeof baseModel)._table_name) {
 			throw("Missing constructor._table_name")
 		}
@@ -492,27 +528,32 @@ export default class baseModel {
 		var on_conflict_action = []
 		var params = []
 		var index=0
-		for(var key of Object.keys((this.constructor as typeof baseModel)._fields)) {
-			index = index + 1
-			columns.push(`"${key}"`)
-			values.push(((this.constructor as typeof baseModel)._fields[key].type && (this.constructor as typeof baseModel)._fields[key].type == "geometry") ? `ST_GeomFromGeoJSON($${index})` : `$${index}`)
-			if((this.constructor as typeof baseModel)._fields[key].primary_key) {
-				on_conflict_columns.push(`"${key}"`)
-			} else {
-				on_conflict_action.push(`"${key}"=COALESCE(excluded."${key}","${(this.constructor as typeof baseModel)._table_name}"."${key}")`)
-			}
-			if ((this.constructor as typeof baseModel)._fields[key].type) {
-				if(["geometry","object"].indexOf((this.constructor as typeof baseModel)._fields[key].type) >= 0) {
-					params.push(JSON.stringify(this[key]))
-				} else if (["interval"].indexOf((this.constructor as typeof baseModel)._fields[key].type) >= 0) {
-					params.push(interval2string(this[key]))
+		for(var key in (this.constructor as typeof baseModel)._fields) {
+			if(key in this) {
+				const  k = key as keyof this
+				index = index + 1
+				columns.push(`"${key}"`)
+				values.push(((this.constructor as typeof baseModel)._fields[key]!.type && (this.constructor as typeof baseModel)._fields[key]!.type == "geometry") ? `ST_GeomFromGeoJSON($${index})` : `$${index}`)
+				if((this.constructor as typeof baseModel)._fields[key]!.primary_key) {
+					on_conflict_columns.push(`"${key}"`)
 				} else {
-					params.push(this[key])
+					on_conflict_action.push(`"${key}"=COALESCE(excluded."${key}","${(this.constructor as typeof baseModel)._table_name}"."${key}")`)
 				}
-			} else if((this.constructor as typeof baseModel)._fields[key].class) {
-				params.push(JSON.stringify(this[key]))
+				if ((this.constructor as typeof baseModel)._fields[key]!.type) {
+					if(["geometry","object"].indexOf((this.constructor as typeof baseModel)._fields[key]!.type) >= 0) {
+						params.push(JSON.stringify(this[k]))
+					} else if (["interval"].indexOf((this.constructor as typeof baseModel)._fields[key]!.type) >= 0) {
+						params.push(interval2string(this[k] as {[x : string] : number } | string))
+					} else {
+						params.push(this[k])
+					}
+				} else if((this.constructor as typeof baseModel)._fields[key]!.class) {
+					params.push(JSON.stringify(this[k]))
+				} else {
+					params.push(this[k])
+				}
 			} else {
-				params.push(this[key])
+				throw new Error("_fields property " + key + " not defined in class")
 			}
 		}
 		var on_conflict_clause = (on_conflict_columns.length) ? (on_conflict_action) ? `ON CONFLICT (${on_conflict_columns.join(",")}) DO UPDATE SET ${on_conflict_action.join(",")}` : `ON CONFLICT (${on_conflict_columns.join(",")}) DO NOTHING` : `ON CONFLICT DO NOTHING`
@@ -523,14 +564,14 @@ export default class baseModel {
 	}
 	static getColumns(add_table_name=false) {
 		return Object.keys(this._fields).map(key=>{
-			if(this._fields[key].child) {
+			if(this._fields[key]!.child) {
 				return
 			} else {
-				var table_name = (add_table_name) ? (this._fields[key].table) ? this._fields[key].table : this._table_name : undefined 
+				var table_name = (add_table_name) ? (this._fields[key]!.table) ? this._fields[key]!.table : this._table_name : undefined 
 				table_name = (table_name) ? `"${table_name}".` : ""
-				if(this._fields[key].column) {
-					return `${table_name}"${this._fields[key].column}"`
-				} else if(this._fields[key].type && this._fields[key].type == "geometry") {
+				if(this._fields[key]!.column) {
+					return `${table_name}"${this._fields[key]!.column}"`
+				} else if(this._fields[key]!.type && this._fields[key]!.type == "geometry") {
 					return `ST_AsGeoJSON(${table_name}"${key}") AS "${key}"`
 				} else {
 					return `${table_name}"${key}"`
@@ -539,8 +580,9 @@ export default class baseModel {
 		}).filter(c=>c)
 	}
 	checkPK() {
-		for(var key of Object.keys((this.constructor as typeof baseModel)._fields).filter(key=>(this.constructor as typeof baseModel)._fields[key].primary_key)) {
-			if(this[key] == null) {
+		for(var key of Object.keys((this.constructor as typeof baseModel)._fields).filter(key=>(this.constructor as typeof baseModel)._fields[key]!.primary_key)) {
+			const k = key as keyof this
+			if(this[k] == null) {
 				throw(new Error("Missing primary key field " + key + ". Insert attempt on table " + (this.constructor as typeof baseModel)._table_name))
 			}
 		} 
@@ -550,7 +592,10 @@ export default class baseModel {
 		const statement = this.build_insert_statement()
 		// console.log(statement.string)
 		// console.log(statement.params)
-		const result = await global.pool.query(statement.string,statement.params)
+		if(!g.pool) {
+			throw new Error("global.pool must be set")
+		}
+		const result = await g.pool.query(statement.string,statement.params)
 		if(!result.rows.length) {
 			throw("nothing inserted")
 		}
@@ -560,7 +605,7 @@ export default class baseModel {
 	static build_read_statement(filter={}) {
 		const columns = this.getColumns()
 		// const joins = this.getJoins(filter)
-		const filters = utils.control_filter2({...this._fields,...this._additional_filters},filter)
+		const filters = control_filter2({...this._fields,...this._additional_filters},filter)
 		const query_string = `SELECT ${columns.join(",")} FROM "${this._table_name}" WHERE 1=1 ${filters}`
 		return query_string
 	}
@@ -568,54 +613,91 @@ export default class baseModel {
 	 * 
 	 * @param {Object} filter 
 	 * @param {Object} options
-	 * @param {boolean} options.mapped_only
 	 * @returns 
 	 */
-	static async read(filter={},options={}) {
-		var statement = this.build_read_statement(filter,options.mapped_only)
-		const result = await global.pool.query(statement)
+	static async read(
+		filter: object={},
+		options: any={}
+	) {
+		var statement = this.build_read_statement(filter)
+		if(!g.pool) {
+			throw new Error("global.pool must be set")
+		}
+		const result = await g.pool.query(statement)
 		return result.rows.map((r: {} | undefined)=>new this(r))
 	}
-	build_update_query(update_keys=[]) {
+	build_update_query<T = Partial<this>>(update_keys : (keyof T)[]=[]) : {
+		string: string;
+		params: T[keyof T][];
+	} | undefined{
 		if(!(this.constructor as typeof baseModel)._table_name) {
 			throw("Missing constructor._table_name. Can't build update query")
 		}
 		const primary_keys = []
-		const valid_update_fields = {}
+		const valid_update_fields : {[x : string] : ModelField} = {}
 		for(var key of Object.keys((this.constructor as typeof baseModel)._fields)) {
-			if((this.constructor as typeof baseModel)._fields[key].primary_key) {
+			if((this.constructor as typeof baseModel)._fields[key]!.primary_key) {
 				primary_keys.push(key)
 			} else {
-				valid_update_fields[key] = (this.constructor as typeof baseModel)._fields[key]
+				valid_update_fields[key] = (this.constructor as typeof baseModel)._fields[key] as ModelField
 			}
 		}
 		const filters = primary_keys.map((key,i)=>`"${key}"=$${i+1}`)
-		const params = [...primary_keys.map(key=>this[key])]
+		const params : (string | this[keyof this])[] = [...primary_keys.map(key=>{
+			if(key in this) {
+				return this[key as keyof this]
+			} else {
+				throw("Key " + key + " not defined in class")
+			}
+		})]
 		var update_clause = []
 		for(var key of Object.keys(valid_update_fields)) {
-			if(!update_keys.indexOf(key) < 0 || typeof this[key] == 'undefined') {
+			const k = key as keyof T
+			if(!(k in this)) {
+				throw new Error("Property key " + key + " not defined in class")
+			}
+			if(update_keys.indexOf(k) < 0 || typeof this[k as keyof this] == 'undefined') {
 				// if value is null it will update to NULL, if undefined it will not update
 				continue
-			} else if (this[key] == null) {
-				params.push(this[key])
+			} else if (this[k as keyof this] == null) {
+				params.push(this[k as keyof this])
 				update_clause.push(`"${key}"=$${params.length}`)
-			} else if (valid_update_fields[key].class) {
-				params.push(this[key][valid_update_fields[key].foreign_key[valid_update_fields[key].column]])
-				update_clause.push(`"${valid_update_fields[key].column}"=$${params.length}`)			
-			} else if(valid_update_fields[key].type.toLowerCase() == "string") {
-				params.push(this[key].toString())
+			} else if (valid_update_fields[key]!.class) {
+				const parentclass = valid_update_fields[key]!.class
+				const classfield = valid_update_fields[key]! as ClassModelField
+				if(!("column" in classfield)) {
+					throw new Error("Missing column in field key " + key)
+				}
+				const parentfield = this[k as  keyof this] as typeof parentclass 
+				const foreignfieldkey = classfield.foreign_key[classfield.column] as keyof (typeof parentclass) 
+				if(!parentfield) {
+					throw new Error("Parent field " + key + " is undefined")
+				}
+				params.push(parentfield[foreignfieldkey])
+				update_clause.push(`"${classfield.column}"=$${params.length}`)			
+			} else if(valid_update_fields[key]!.type.toLowerCase() == "string") {
+				const rawValue = this[key as keyof this]
+				if(typeof rawValue !== "string" ) {
+					throw new Error("Value of key " + key + " must be string")
+				}
+				const value = rawValue as string
+				params.push(value.toString())
 				update_clause.push(`"${key}"=$${params.length}`) 
-			} else if(valid_update_fields[key].type.toLowerCase() == "geometry") {
-				params.push(JSON.stringify(this[key]))
+			} else if(valid_update_fields[key]!.type.toLowerCase() == "geometry") {
+				params.push(JSON.stringify(this[key as keyof this]))
 				update_clause.push(`"${key}"=ST_GeomFromGeoJSON($${params.length})`)
-			} else if(["timestamp","timestamptz","date"].indexOf(valid_update_fields[key].type.toLowerCase()) >= 0) {
-				params.push(this[key].toISOString())
+			} else if(["timestamp","timestamptz","date"].indexOf(valid_update_fields[key]!.type.toLowerCase()) >= 0) {
+				const value = this[key as keyof this] as Date
+				if(!(value instanceof Date)) {
+					throw new Error("Date expected for key " + key)
+				}
+				params.push(value.toISOString())
 				update_clause.push(`"${key}"=$${params.length}::timestamptz`)
-			} else if(["json","jsonb"].indexOf(valid_update_fields[key].type.toLowerCase()) >= 0) {
-				params.push(JSON.stringify(this[key]))
+			} else if(["json","jsonb"].indexOf(valid_update_fields[key]!.type.toLowerCase()) >= 0) {
+				params.push(JSON.stringify(this[key as keyof this]))
 				update_clause.push(`"${key}"=$${params.length}`)
 			} else {
-				params.push(this[key])
+				params.push(this[key as keyof this])
 				update_clause.push(`"${key}"=$${params.length}`)
 			}
 		}
@@ -626,7 +708,7 @@ export default class baseModel {
 		const returning = (this.constructor as typeof baseModel).getColumns()
 		return {
 			string: `UPDATE "${(this.constructor as typeof baseModel)._table_name}" SET ${update_clause.join(", ")} WHERE ${filters.join(" AND ")} RETURNING ${returning.join(",")}`,
-			params: params
+			params: params as T[keyof T][]
 		}
 	}
 
@@ -634,19 +716,19 @@ export default class baseModel {
 	 * Updates each row matching given primary keys with given non-primary key field values
 	 * @param {object[]} updates - List of tuples. Each tuple must contain table primary key values and at least one non-primary key field with a new value
 	 */
-	static async update(updates : KeyValueTuple[]=[]) {
+	static async update(this : typeof baseModel, updates : {[x: string] : any}[]=[]) {
 		if(!this._fields) {
 			throw(new Error("Can't use update method on this class: constructor._fields not defined"))
 		}
-		const primary_key_fields = Object.keys(this._fields).filter(key=>this._fields[key].primary_key)
+		const primary_key_fields = Object.keys(this._fields).filter(key=>this._fields[key]!.primary_key)
 		if(!primary_key_fields.length) {
 			throw(new Error("Can't use update method on this class: missing primary key fields on constructor._fields"))
 		}
 		const result = []
 		tuple_loop:
 		for(var update_tuple of updates) {
-			const read_filter = {}
-			const changes = {}
+			const read_filter : any = {}
+			const changes : any = {}
 			for(var key of Object.keys(this._fields)) { 
 				if(primary_key_fields.indexOf(key) >= 0) {
 					if(!update_tuple[key]) {
@@ -669,7 +751,10 @@ export default class baseModel {
 				console.error("No rows matched for update. Consider using .create")
 				continue tuple_loop
 			}
-			result.push(await read_result[0].update(changes))			
+			if(!read_result.length) {
+				throw new Error("No rows to update")
+			}
+			result.push(await read_result[0]!.update(changes))			
 		}
 		return result
 	}
@@ -681,8 +766,11 @@ export default class baseModel {
 			// console.error("Nothing set to update")
 			return this
 		}
+		if(!g.pool) {
+			throw new Error("Must start global.pool")
+		}
 		try {
-			var result = await global.pool.query(statement.string,statement.params)
+			var result = await g.pool.query(statement.string,statement.params)
 		} catch(e) {
 			throw(e)
 		}
@@ -698,21 +786,25 @@ export default class baseModel {
 		if(!this._table_name) {
 			throw("Missing constructor._table_name. Can't build update query")
 		}
-		var filter_string = utils.control_filter2(this._fields,filter)
-		if(!filter_string.length) {
-			throw("At least one filter required for delete action")
+		var filter_string = control_filter2(this._fields,filter)
+		if(filter_string || (filter_string && !filter_string.length)) {
+			throw new Error("At least one filter required for delete action")
 		}
 		const returning = this.getColumns()
-		var result = await global.pool.query(`DELETE FROM "${this._table_name}" WHERE 1=1 ${filter_string} RETURNING ${returning.join(",")}`)
+		if(!g.pool)  {
+			throw new Error("Must start global.pool")
+		}
+		var result = await g.pool.query(`DELETE FROM "${this._table_name}" WHERE 1=1 ${filter_string} RETURNING ${returning.join(",")}`)
 		return result.rows.map((r: {} | undefined)=>new this(r))
 	}
 
-	partial(columns=[]) {
-		const partial = {} // new internal.baseModel()
-		for(var key of columns) {
+	partial(columns : (keyof this)[] = []) {
+		const partial : Partial<this> = {} // new internal.baseModel()
+		for(const key of columns) {
 			partial[key] = this[key]
 		}
-		return new this.constructor(partial)
+		const ctor = this.constructor as { new (init?: Partial<baseModel>): baseModel };
+		return new ctor(partial)
 	}
 
 	static _table_name = undefined
@@ -720,14 +812,18 @@ export default class baseModel {
 	static _additional_filters = {}
 }
 
-internal.BaseArray = class extends Array {
+export class BaseArray<Type> extends Array {
+	async create() : Promise<Type[]> {
+		const created : Type[] = []
+		for(const item of this) {
+			created.push(await item.create()) 
+		}
+		return created
+	}
 	async writeFile(output_file: any,output_format: any) {
-		return internal.writeModelToFile(this,output_file,output_format)
+		return writeModelToFile({ valor: this},output_file,output_format)
     }
-	static readFile(input_file: any,input_format: any,property_name: any,options: any) {
-		return internal.readModelFromFile(this,input_file,input_format,property_name,options)
+	static readFile(input_file: any,input_format: any,options: any) {
+		return readModelFromFile(BaseArray,input_file,input_format,options)
 	}
 }
-
-
-module.exports = internal

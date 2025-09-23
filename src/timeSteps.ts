@@ -198,3 +198,22 @@ export class Interval {
 		}
 	}
 }
+
+export function interval2string(interval? : {[x : string] : number } | string) {
+	if(!interval) {
+		return "00:00:00"
+	}
+	if(interval instanceof Object) {
+		if(Object.keys(interval).length == 0) {
+			return "00:00:00"
+		} else {
+			var string = ""
+			Object.keys(interval).forEach(key=>{
+				string += interval[key] + " " + key + " "
+			})
+			return string.replace(/\s$/,"")
+		}
+	} else {
+		return interval.toString()
+	}
+}

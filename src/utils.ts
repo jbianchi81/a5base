@@ -41,9 +41,20 @@ function assertValidDateTruncField(field : string) {
 	}
 }
 
-export function control_filter2(valid_filters: { [x: string]: {
-    expression: string; required?: boolean, table?: string, column?: string, type?: string, case_insensitive?: boolean, trunc?: string; 
-}; }, filter: { [x: string]: any; }, default_table: string, crud: any, throw_on_error=false) {
+export function control_filter2(
+    valid_filters: { [x: string]: {
+        expression?: string; 
+        required?: boolean, 
+        table?: string, 
+        column?: string, 
+        type?: string, 
+        case_insensitive?: boolean, 
+        trunc?: string; 
+    }; }, 
+    filter: { [x: string]: any; }, 
+    default_table?: string, 
+    crud?: any, 
+    throw_on_error? : boolean) {
 	// valid_filters = { column1: { table: "table_name", type: "data_type", required: bool, column: "column_name"}, ... }  
 	// filter = { column1: "value1", column2: "value2", ....}
 	// default_table = "table"
