@@ -1,8 +1,5 @@
-/// <reference types="node" />
-/// <reference types="node" />
-/// <reference types="node" />
 import fs from 'promise-fs';
-declare type AnyClass = {
+type AnyClass = {
     toCSV?(): string;
     valor?: string | Uint8Array | Buffer | number | number[];
     prototype?: string | string[];
@@ -25,7 +22,7 @@ interface ModelField {
     primary_key?: boolean;
 }
 export declare function writeModelToFile(model: WriteableModel, output_file: string, output_format: string): Promise<void>;
-declare type AnyModel<T = AnyClass> = {
+type AnyModel<T = AnyClass> = {
     new (...args: any[]): T;
     fromCSV?(csv: string, separator?: string, header?: string[]): T;
     fromRaster?(rast: unknown): T;
@@ -39,7 +36,7 @@ interface ReadFileOptions {
     id_property?: string;
 }
 export declare function readModelFromFile(model_class: AnyModel, input_file: string, input_format: string, options?: ReadFileOptions): AnyClass | AnyClass[];
-export default class baseModel {
+export declare class baseModel {
     writeFile(output_file: string, output_format: string): Promise<void>;
     static readFile(input_file: string, input_format: string, options: ReadFileOptions): AnyClass | AnyClass[];
     static createFromFile(input_file: any, input_format: any, options: any): Promise<AnyClass | (AnyClass | AnyClass[])[]>;

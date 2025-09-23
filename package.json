@@ -1,8 +1,21 @@
 {
   "name": "a5base",
-  "type": "module",
+  "license": "MIT",
+  "version": "1.0.0",
+  "description": "a5 base model",
+  "exports": {
+    ".": {
+      "import": "./dist/esm/src/index.js",
+      "require": "./dist/cjs/src/index.js"
+    }
+  },
+  "main": "./dist/cjs/src/index.js",  
+  "module": "./dist/esm/src/index.js",
+  "types": "./dist/esm/src/index.d.ts", 
   "scripts": {
-    "test": "node --test --loader ts-node/esm"
+    "test": "node --test --loader ts-node/esm",
+    "build": "tsc -p tsconfig.esm.json && tsc -p tsconfig.cjs.json",
+    "prepublishOnly": "npm run build"
   },
   "dependencies": {
     "@turf/bbox": "^7.2.0",

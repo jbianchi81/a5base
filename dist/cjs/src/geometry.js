@@ -1,8 +1,46 @@
-import Wkt from 'wicket';
-const wkt = new Wkt.Wkt();
-import bbox from '@turf/bbox';
-import * as turfHelpers from '@turf/helpers';
-import geojsonValidation from 'geojson-validation';
+"use strict";
+var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    var desc = Object.getOwnPropertyDescriptor(m, k);
+    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
+      desc = { enumerable: true, get: function() { return m[k]; } };
+    }
+    Object.defineProperty(o, k2, desc);
+}) : (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    o[k2] = m[k];
+}));
+var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
+    Object.defineProperty(o, "default", { enumerable: true, value: v });
+}) : function(o, v) {
+    o["default"] = v;
+});
+var __importStar = (this && this.__importStar) || (function () {
+    var ownKeys = function(o) {
+        ownKeys = Object.getOwnPropertyNames || function (o) {
+            var ar = [];
+            for (var k in o) if (Object.prototype.hasOwnProperty.call(o, k)) ar[ar.length] = k;
+            return ar;
+        };
+        return ownKeys(o);
+    };
+    return function (mod) {
+        if (mod && mod.__esModule) return mod;
+        var result = {};
+        if (mod != null) for (var k = ownKeys(mod), i = 0; i < k.length; i++) if (k[i] !== "default") __createBinding(result, mod, k[i]);
+        __setModuleDefault(result, mod);
+        return result;
+    };
+})();
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
+Object.defineProperty(exports, "__esModule", { value: true });
+const wicket_1 = __importDefault(require("wicket"));
+const wkt = new wicket_1.default.Wkt();
+const bbox_1 = __importDefault(require("@turf/bbox"));
+const turfHelpers = __importStar(require("@turf/helpers"));
+const geojson_validation_1 = __importDefault(require("geojson-validation"));
 function isNumberArray(value) {
     return Array.isArray(value) && value.every(item => typeof item === "number");
 }
@@ -12,7 +50,7 @@ function isArrayOfNumberArray(value) {
 function isArrayOfArrayOfNumberArray(value) {
     return Array.isArray(value) && value.every(item => isArrayOfNumberArray(typeof item === "number"));
 }
-export default class Geometry {
+class Geometry {
     constructor(args) {
         // super()
         // console.log(JSON.stringify({geom_arguments:arguments}))
@@ -82,7 +120,7 @@ export default class Geometry {
             }
             // console.log(JSON.stringify(this))
         }
-        if (!geojsonValidation.isGeometryObject({ type: capitalize_initial(this.type), coordinates: this.coordinates })) {
+        if (!geojson_validation_1.default.isGeometryObject({ type: capitalize_initial(this.type), coordinates: this.coordinates })) {
             throw new Error("Invalid geometry");
         }
     }
@@ -164,9 +202,10 @@ export default class Geometry {
     bbox() {
         // bbox extent in [minX, minY, maxX, maxY] order
         const geom = this.toGeoJSON();
-        return bbox(geom);
+        return (0, bbox_1.default)(geom);
     }
 }
+exports.default = Geometry;
 function capitalize_initial(str) {
     if (!str)
         return str;

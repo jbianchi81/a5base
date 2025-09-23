@@ -164,7 +164,7 @@ export function readModelFromFile(
 	}
 }
 
-export default class baseModel {
+export class baseModel {
 	async writeFile(output_file : string, output_format : string) {
 		return writeModelToFile(this,output_file,output_format)
     }

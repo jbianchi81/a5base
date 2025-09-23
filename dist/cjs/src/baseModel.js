@@ -1,14 +1,21 @@
 'use strict';
-import fs from 'promise-fs';
-import YAML from 'yaml';
-import CSV from 'csv-string';
-import { isIterable, delay, control_filter2 } from './utils';
-import { Interval, interval2string } from './timeSteps';
-import Geometry from './geometry';
-import setGlobal from './setGlobal';
-const g = setGlobal();
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.BaseArray = exports.baseModel = void 0;
+exports.writeModelToFile = writeModelToFile;
+exports.readModelFromFile = readModelFromFile;
+const promise_fs_1 = __importDefault(require("promise-fs"));
+const yaml_1 = __importDefault(require("yaml"));
+const csv_string_1 = __importDefault(require("csv-string"));
+const utils_1 = require("./utils");
+const timeSteps_1 = require("./timeSteps");
+const geometry_1 = __importDefault(require("./geometry"));
+const setGlobal_1 = __importDefault(require("./setGlobal"));
+const g = (0, setGlobal_1.default)();
 ;
-export async function writeModelToFile(model, output_file, output_format) {
+async function writeModelToFile(model, output_file, output_format) {
     if (!model) {
         throw ("missing model");
     }
@@ -17,13 +24,13 @@ export async function writeModelToFile(model, output_file, output_format) {
     }
     output_format = (output_format) ? output_format : "json";
     if (output_format == "json") {
-        await fs.writeFile(output_file, JSON.stringify(model));
+        await promise_fs_1.default.writeFile(output_file, JSON.stringify(model));
     }
     else if (output_format == "csv") {
         if (!model.toCSV) {
             throw ("toCSV() not defined for this class");
         }
-        await fs.writeFile(output_file, model.toCSV());
+        await promise_fs_1.default.writeFile(output_file, model.toCSV());
     }
     else if (output_format == "raster") {
         if (!model.valor) {
@@ -33,16 +40,16 @@ export async function writeModelToFile(model, output_file, output_format) {
             throw new Error("Invalid valor. Must be buffer");
         }
         if (typeof model.valor === "string") {
-            await fs.writeFile(output_file, Buffer.from(model.valor, "utf8")); // string case
+            await promise_fs_1.default.writeFile(output_file, Buffer.from(model.valor, "utf8")); // string case
         }
         else if (Array.isArray(model.valor) && model.valor.every(n => typeof n === "number")) {
-            await fs.writeFile(output_file, Buffer.from(model.valor)); // number array case
+            await promise_fs_1.default.writeFile(output_file, Buffer.from(model.valor)); // number array case
         }
         else if (model.valor instanceof Buffer) {
-            await fs.writeFile(output_file, Buffer.from(model.valor)); // copy buffer case
+            await promise_fs_1.default.writeFile(output_file, Buffer.from(model.valor)); // copy buffer case
         }
         else if (model.valor instanceof Uint8Array) {
-            await fs.writeFile(output_file, Buffer.from(model.valor)); // typed array case
+            await promise_fs_1.default.writeFile(output_file, Buffer.from(model.valor)); // typed array case
         }
         else {
             throw new Error("Invalid argument for Buffer.from");
@@ -51,9 +58,9 @@ export async function writeModelToFile(model, output_file, output_format) {
     else {
         throw ("Invalid format");
     }
-    await delay(500);
+    await (0, utils_1.delay)(500);
 }
-export function readModelFromFile(model_class, input_file, input_format, options = {}) {
+function readModelFromFile(model_class, input_file, input_format, options = {}) {
     const separator = options.separator ?? ",";
     if (!model_class) {
         throw ("missing model_class");
@@ -63,8 +70,8 @@ export function readModelFromFile(model_class, input_file, input_format, options
     }
     input_format = (input_format) ? input_format : "json";
     if (input_format == "json" || input_format == "yml") {
-        var content = fs.readFileSync(input_file, 'utf-8');
-        var parsed_content = YAML.parse(content); // JSON.parse(content)
+        var content = promise_fs_1.default.readFileSync(input_file, 'utf-8');
+        var parsed_content = yaml_1.default.parse(content); // JSON.parse(content)
         if (options.property_name != null) {
             if (!parsed_content.hasOwnProperty(options.property_name)) {
                 throw (`Property ${options.property_name} not found in json file`);
@@ -85,7 +92,7 @@ export function readModelFromFile(model_class, input_file, input_format, options
         if (!model_class.fromCSV) {
             throw ("fromCSV() not defined for this class");
         }
-        var content = fs.readFileSync(input_file, 'utf-8');
+        var content = promise_fs_1.default.readFileSync(input_file, 'utf-8');
         if (model_class.prototype instanceof Array) {
             return model_class.fromCSV(content, separator);
         }
@@ -123,15 +130,7 @@ export function readModelFromFile(model_class, input_file, input_format, options
         throw ("Invalid format");
     }
 }
-export default class baseModel {
-    constructor(fields = {}) {
-        const empty_fields = {};
-        for (var key of Object.keys(this.constructor._fields)) {
-            empty_fields[key] = undefined;
-        }
-        this.set(empty_fields);
-        this.set(fields);
-    }
+class baseModel {
     async writeFile(output_file, output_format) {
         return writeModelToFile(this, output_file, output_format);
     }
@@ -163,12 +162,12 @@ export default class baseModel {
     static async updateFromFile(input_file, input_format = "yml", options = {}) {
         var parsed_content;
         if (input_format == "csv") {
-            var content = fs.readFileSync(input_file, 'utf-8');
-            parsed_content = CSV.parse(content, { output: "objects" });
+            var content = promise_fs_1.default.readFileSync(input_file, 'utf-8');
+            parsed_content = csv_string_1.default.parse(content, { output: "objects" });
         }
         else {
-            var content = fs.readFileSync(input_file, 'utf-8');
-            parsed_content = YAML.parse(content);
+            var content = promise_fs_1.default.readFileSync(input_file, 'utf-8');
+            parsed_content = yaml_1.default.parse(content);
             if (options.property_name) {
                 if (!parsed_content[options.property_name]) {
                     throw (new Error("property " + options.property_name + " not found in file " + input_file));
@@ -180,6 +179,14 @@ export default class baseModel {
             }
         }
         return this.update(parsed_content);
+    }
+    constructor(fields = {}) {
+        const empty_fields = {};
+        for (var key of Object.keys(this.constructor._fields)) {
+            empty_fields[key] = undefined;
+        }
+        this.set(empty_fields);
+        this.set(fields);
     }
     static sanitizeValue(value, definition = {}) {
         if (value == null) {
@@ -214,7 +221,7 @@ export default class baseModel {
                     return parseFloat(value.toString());
                 }
                 else if (definition.type == "interval") {
-                    return new Interval(value.toString());
+                    return new timeSteps_1.Interval(value.toString());
                 }
                 else if (definition.type == "object") {
                     if (typeof value == "string" && value.length) {
@@ -254,13 +261,13 @@ export default class baseModel {
                     else {
                         obj = value;
                     }
-                    return new Geometry(obj);
+                    return new geometry_1.default(obj);
                 }
                 else if (definition.type == "timestamp") {
                     return new Date(value.toString());
                 }
                 else if (definition.type == "array") {
-                    if (isIterable(value) && typeof value !== "string") {
+                    if ((0, utils_1.isIterable)(value) && typeof value !== "string") {
                         if (definition.items) {
                             return value.map((item) => {
                                 return this.sanitizeValue(item, definition.items);
@@ -421,7 +428,7 @@ export default class baseModel {
                 }
             }
         }
-        return CSV.stringify(rows).replace(/\r\n$/, "");
+        return csv_string_1.default.stringify(rows).replace(/\r\n$/, "");
     }
     /**
      *
@@ -452,7 +459,7 @@ export default class baseModel {
             }
         }
         rows.push(row);
-        return CSV.stringify(rows).replace(/\r\n$/, "");
+        return csv_string_1.default.stringify(rows).replace(/\r\n$/, "");
     }
     getOne(key) {
         return this[key];
@@ -481,7 +488,7 @@ export default class baseModel {
             throw ("Missing constructor._fields for class " + this.name);
         }
         const columns_arr = (columns) ? columns : Object.keys(this._fields);
-        const rows = CSV.parse(row_csv_string, separator);
+        const rows = csv_string_1.default.parse(row_csv_string, separator);
         if (!rows.length) {
             throw new Error("No content found in CSV file");
         }
@@ -525,7 +532,7 @@ export default class baseModel {
                         params.push(JSON.stringify(this[k]));
                     }
                     else if (["interval"].indexOf(this.constructor._fields[key].type) >= 0) {
-                        params.push(interval2string(this[k]));
+                        params.push((0, timeSteps_1.interval2string)(this[k]));
                     }
                     else {
                         params.push(this[k]);
@@ -594,7 +601,7 @@ export default class baseModel {
     static build_read_statement(filter = {}) {
         const columns = this.getColumns();
         // const joins = this.getJoins(filter)
-        const filters = control_filter2({ ...this._fields, ...this._additional_filters }, filter);
+        const filters = (0, utils_1.control_filter2)({ ...this._fields, ...this._additional_filters }, filter);
         const query_string = `SELECT ${columns.join(",")} FROM "${this._table_name}" WHERE 1=1 ${filters}`;
         return query_string;
     }
@@ -776,7 +783,7 @@ export default class baseModel {
         if (!this._table_name) {
             throw ("Missing constructor._table_name. Can't build update query");
         }
-        var filter_string = control_filter2(this._fields, filter);
+        var filter_string = (0, utils_1.control_filter2)(this._fields, filter);
         if (filter_string || (filter_string && !filter_string.length)) {
             throw new Error("At least one filter required for delete action");
         }
@@ -796,10 +803,11 @@ export default class baseModel {
         return new ctor(partial);
     }
 }
+exports.baseModel = baseModel;
 baseModel._table_name = undefined;
 baseModel._fields = {};
 baseModel._additional_filters = {};
-export class BaseArray extends Array {
+class BaseArray extends Array {
     async create() {
         const created = [];
         for (const item of this) {
@@ -814,3 +822,4 @@ export class BaseArray extends Array {
         return readModelFromFile(BaseArray, input_file, input_format, options);
     }
 }
+exports.BaseArray = BaseArray;

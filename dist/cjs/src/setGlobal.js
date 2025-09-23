@@ -1,22 +1,29 @@
-import { Pool } from 'pg';
-export default function setGlobal() {
+"use strict";
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.default = setGlobal;
+const pg_1 = require("pg");
+const path_1 = __importDefault(require("path"));
+const config_1 = __importDefault(require("config"));
+function setGlobal() {
     const g = global;
     if (!g.pool) {
         // console.log("setting global.pool")
-        const path = require('path');
-        process.env["NODE_CONFIG_DIR"] = path.resolve(__dirname, "../config/");
-        process.env["A5_BASE_DIR"] = path.resolve(__dirname, "..");
-        const config = require('config');
-        g.config = config;
-        if (!config.database) {
+        process.env["NODE_CONFIG_DIR"] = path_1.default.resolve("config/");
+        process.env["A5_BASE_DIR"] = path_1.default.resolve(".");
+        g.config = config_1.default;
+        const c = g.config;
+        if (!("database" in c)) {
             throw ("Missing config.database");
         }
-        if (!config.database.idleTimeoutMillis) {
-            config.database.idleTimeoutMillis = 1000;
+        if (!c.database.idleTimeoutMillis) {
+            c.database.idleTimeoutMillis = 1000;
         }
-        g.pool = new Pool(config.database);
+        g.pool = new pg_1.Pool(c.database);
         if (!g.dbConnectionString) {
-            g.dbConnectionString = "host=" + config.database.host + " user=" + config.database.user + " dbname=" + config.database.database + " password=" + config.database.password + " port=" + config.database.port;
+            g.dbConnectionString = "host=" + c.database.host + " user=" + c.database.user + " dbname=" + c.database.database + " password=" + c.database.password + " port=" + c.database.port;
         }
         // if (!Promise.allSettled) {
         //     Promise.allSettled = (promises : Promise<any>[]) =>
@@ -42,8 +49,8 @@ export default function setGlobal() {
                 console.log(new Date().toISOString() + " POOL NOT SET");
             }
         };
-        if (config.log_pool_usage && config.log_pool_usage.activate) {
-            setInterval(g.logPoolUsage, config.log_pool_usage.interval);
+        if (c.log_pool_usage && c.log_pool_usage.activate) {
+            setInterval(g.logPoolUsage, c.log_pool_usage.interval);
         }
     }
     return g;

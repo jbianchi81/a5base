@@ -1,6 +1,14 @@
-import Geometry from './geometry';
-import { createInterval } from './timeSteps';
-export async function delay(t, val) {
+"use strict";
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.delay = delay;
+exports.isIterable = isIterable;
+exports.control_filter2 = control_filter2;
+const geometry_1 = __importDefault(require("./geometry"));
+const timeSteps_1 = require("./timeSteps");
+async function delay(t, val) {
     return new Promise(function (resolve) {
         setTimeout(function () {
             // console.log("waited " + t + " ms")
@@ -8,7 +16,7 @@ export async function delay(t, val) {
         }, t);
     });
 }
-export function isIterable(obj) {
+function isIterable(obj) {
     // checks for null and undefined
     if (obj == null) {
         return false;
@@ -36,7 +44,7 @@ function assertValidDateTruncField(field) {
         throw (new Error("Invalid date_trunc field: " + field));
     }
 }
-export function control_filter2(valid_filters, filter, default_table, crud, throw_on_error) {
+function control_filter2(valid_filters, filter, default_table, crud, throw_on_error) {
     // valid_filters = { column1: { table: "table_name", type: "data_type", required: bool, column: "column_name"}, ... }  
     // filter = { column1: "value1", column2: "value2", ....}
     // default_table = "table"
@@ -100,7 +108,7 @@ export function control_filter2(valid_filters, filter, default_table, crud, thro
                     }
                 }
                 else if (valid_filter.type == "geometry") {
-                    if (filter[key] instanceof Geometry) {
+                    if (filter[key] instanceof geometry_1.default) {
                         const geom = filter[key];
                         filter_string += "  AND ST_Distance(st_transform(" + fullkey + ",4326),st_transform(" + geom.toSQL() + ",4326)) < 0.001";
                     }
@@ -222,7 +230,7 @@ export function control_filter2(valid_filters, filter, default_table, crud, thro
                     }
                 }
                 else if (valid_filter.type == "interval") {
-                    const value = createInterval(filter[key]);
+                    const value = (0, timeSteps_1.createInterval)(filter[key]);
                     if (!value) {
                         throw ("invalid interval filter: " + filter[key]);
                     }

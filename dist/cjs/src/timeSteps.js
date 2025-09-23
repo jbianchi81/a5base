@@ -1,4 +1,14 @@
-import parsePGinterval from 'postgres-interval';
+"use strict";
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.Interval = void 0;
+exports.intervalFromString = intervalFromString;
+exports.createInterval = createInterval;
+exports.interval2epochSync = interval2epochSync;
+exports.interval2string = interval2string;
+const postgres_interval_1 = __importDefault(require("postgres-interval"));
 function isJson(str) {
     try {
         JSON.parse(str);
@@ -25,10 +35,10 @@ const interval_key_map = {
     years: "years",
     year: "years"
 };
-export function intervalFromString(interval_string) {
+function intervalFromString(interval_string) {
     const kvp = interval_string.split(/\s+/);
     if (kvp.length > 1) {
-        var interval = parsePGinterval();
+        var interval = (0, postgres_interval_1.default)();
         for (var i = 0; i < kvp.length - 1; i = i + 2) {
             var key = interval_key_map[kvp[i + 1].toLowerCase()];
             if (!key) {
@@ -40,22 +50,22 @@ export function intervalFromString(interval_string) {
         }
     }
     else {
-        var interval = parsePGinterval(interval_string);
+        var interval = (0, postgres_interval_1.default)(interval_string);
     }
     // Object.assign(interval,JSON.parse(value))
     return interval;
 }
-export function createInterval(value) {
+function createInterval(value) {
     if (!value) {
         return; //  parsePGinterval()
     }
     if (value.constructor && value.constructor.name == 'PostgresInterval') {
-        var interval = parsePGinterval();
+        var interval = (0, postgres_interval_1.default)();
         Object.assign(interval, value);
         return interval;
     }
     if (value instanceof Object) {
-        var interval = parsePGinterval();
+        var interval = (0, postgres_interval_1.default)();
         Object.keys(value).map(k => {
             switch (k) {
                 case "milliseconds":
@@ -95,7 +105,7 @@ export function createInterval(value) {
     }
     if (typeof value == 'string') {
         if (isJson(value)) {
-            var interval = parsePGinterval();
+            var interval = (0, postgres_interval_1.default)();
             Object.assign(interval, JSON.parse(value));
             return interval;
         }
@@ -109,7 +119,7 @@ export function createInterval(value) {
         return;
     }
 }
-export function interval2epochSync(interval) {
+function interval2epochSync(interval) {
     if (!interval) {
         return 0;
     }
@@ -159,9 +169,9 @@ export function interval2epochSync(interval) {
     });
     return seconds;
 }
-export class Interval {
+class Interval {
     constructor(intervalstr) {
-        this.interval = parsePGinterval(intervalstr);
+        this.interval = (0, postgres_interval_1.default)(intervalstr);
         const values = createInterval(intervalstr);
         Object.assign(this.interval, values);
     }
@@ -191,7 +201,8 @@ export class Interval {
         }
     }
 }
-export function interval2string(interval) {
+exports.Interval = Interval;
+function interval2string(interval) {
     if (!interval) {
         return "00:00:00";
     }

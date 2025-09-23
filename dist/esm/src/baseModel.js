@@ -123,15 +123,7 @@ export function readModelFromFile(model_class, input_file, input_format, options
         throw ("Invalid format");
     }
 }
-export default class baseModel {
-    constructor(fields = {}) {
-        const empty_fields = {};
-        for (var key of Object.keys(this.constructor._fields)) {
-            empty_fields[key] = undefined;
-        }
-        this.set(empty_fields);
-        this.set(fields);
-    }
+export class baseModel {
     async writeFile(output_file, output_format) {
         return writeModelToFile(this, output_file, output_format);
     }
@@ -180,6 +172,14 @@ export default class baseModel {
             }
         }
         return this.update(parsed_content);
+    }
+    constructor(fields = {}) {
+        const empty_fields = {};
+        for (var key of Object.keys(this.constructor._fields)) {
+            empty_fields[key] = undefined;
+        }
+        this.set(empty_fields);
+        this.set(fields);
     }
     static sanitizeValue(value, definition = {}) {
         if (value == null) {
