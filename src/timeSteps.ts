@@ -1,6 +1,7 @@
 import PostgresInterval from 'postgres-interval';
 import parsePGinterval from 'postgres-interval'
-import { IntervalObject } from 'postgres-interval'
+import interval from 'postgres-interval'
+type PostgresInterval = ReturnType<typeof interval>;
 
 function isJson(str : string) {
     try {
@@ -34,7 +35,7 @@ export function intervalFromString(interval_string : string) {
 	if(kvp.length > 1) {
 		var interval = parsePGinterval()
 		for(var i=0;i<kvp.length-1;i=i+2) {
-			var key = interval_key_map[kvp[i+1]!.toLowerCase()] as keyof IntervalObject
+			var key = interval_key_map[kvp[i+1]!.toLowerCase()] as keyof PostgresInterval
 			if(!key) {
 				throw("Invalid interval key " + kvp[i+1]!.toLowerCase())
 			}
@@ -165,7 +166,7 @@ export function interval2epochSync(interval? : any) {
 }	
 
 export class Interval {
-    private interval : IntervalObject
+    private interval : PostgresInterval
 	constructor(intervalstr : string) {
 		this.interval = parsePGinterval(intervalstr)
 		const values = createInterval(intervalstr);
@@ -184,7 +185,7 @@ export class Interval {
 	}
 	getKey() {
 		for(var key of Object.keys(this.interval)) {
-            const k =  key as keyof IntervalObject
+            const k =  key as keyof PostgresInterval
 			if(k != "toPostgres" && this.interval[k] && this.interval[k] > 0) {
 				return key
 			}
@@ -193,7 +194,7 @@ export class Interval {
 	getValue() {
 		const key = this.getKey()
 		if(key) {
-            const k = key as keyof IntervalObject
+            const k = key as keyof PostgresInterval
 			return this.interval[k]
 		}
 	}
