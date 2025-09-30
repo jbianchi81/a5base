@@ -8,7 +8,7 @@ exports.writeModelToFile = writeModelToFile;
 exports.readModelFromFile = readModelFromFile;
 const promise_fs_1 = __importDefault(require("promise-fs"));
 const yaml_1 = __importDefault(require("yaml"));
-const csv_string_1 = __importDefault(require("csv-string"));
+const csv_string_1 = require("csv-string");
 const utils_1 = require("./utils");
 const timeSteps_1 = require("./timeSteps");
 const geometry_1 = __importDefault(require("./geometry"));
@@ -163,7 +163,7 @@ class baseModel {
         var parsed_content;
         if (input_format == "csv") {
             var content = promise_fs_1.default.readFileSync(input_file, 'utf-8');
-            parsed_content = csv_string_1.default.parse(content, { output: "objects" });
+            parsed_content = (0, csv_string_1.parse)(content, { output: "objects" });
         }
         else {
             var content = promise_fs_1.default.readFileSync(input_file, 'utf-8');
@@ -428,7 +428,7 @@ class baseModel {
                 }
             }
         }
-        return csv_string_1.default.stringify(rows).replace(/\r\n$/, "");
+        return (0, csv_string_1.stringify)(rows).replace(/\r\n$/, "");
     }
     /**
      *
@@ -459,7 +459,7 @@ class baseModel {
             }
         }
         rows.push(row);
-        return csv_string_1.default.stringify(rows).replace(/\r\n$/, "");
+        return (0, csv_string_1.stringify)(rows).replace(/\r\n$/, "");
     }
     getOne(key) {
         return this[key];
@@ -488,7 +488,7 @@ class baseModel {
             throw ("Missing constructor._fields for class " + this.name);
         }
         const columns_arr = (columns) ? columns : Object.keys(this._fields);
-        const rows = csv_string_1.default.parse(row_csv_string, separator);
+        const rows = (0, csv_string_1.parse)(row_csv_string, separator);
         if (!rows.length) {
             throw new Error("No content found in CSV file");
         }

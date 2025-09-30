@@ -38,15 +38,16 @@ export default function setGlobal() {
         g.config = config
         const c = g.config as A5Config
         if(!("database" in c)) {
-            throw("Missing config.database")
-        }
-        if(! c.database.idleTimeoutMillis) {
-        c.database.idleTimeoutMillis = 1000
-        }
-        
-        g.pool = new Pool(c.database)
-        if(!g.dbConnectionString) {
-            g.dbConnectionString = "host=" + c.database.host + " user=" + c.database.user + " dbname=" + c.database.database + " password=" + c.database.password + " port=" + c.database.port
+            console.warn("Missing config.database. Not starting pool.")
+        } else {
+            if(! c.database.idleTimeoutMillis) {
+            c.database.idleTimeoutMillis = 1000
+            }
+            
+            g.pool = new Pool(c.database)
+            if(!g.dbConnectionString) {
+                g.dbConnectionString = "host=" + c.database.host + " user=" + c.database.user + " dbname=" + c.database.database + " password=" + c.database.password + " port=" + c.database.port
+            }
         }
         // if (!Promise.allSettled) {
         //     Promise.allSettled = (promises : Promise<any>[]) =>

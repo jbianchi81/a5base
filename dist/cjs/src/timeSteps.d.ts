@@ -1,20 +1,28 @@
-import { IntervalObject } from 'postgres-interval';
-export declare function intervalFromString(interval_string: string): IntervalObject;
-export declare function createInterval(value: any): IntervalObject | undefined;
+import PostgresInterval from 'postgres-interval';
+export declare function intervalFromString(interval_string: string): PostgresInterval.IPostgresInterval;
+export declare function createInterval(value: any): PostgresInterval.IPostgresInterval | undefined;
 export declare function interval2epochSync(interval?: any): number | undefined;
 export declare class Interval {
     private interval;
     constructor(intervalstr: string);
-    get years(): number | undefined;
-    get months(): number | undefined;
-    get days(): number | undefined;
-    get hours(): number | undefined;
-    get minutes(): number | undefined;
-    get seconds(): number | undefined;
-    get milliseconds(): number | undefined;
+    get years(): number;
+    get months(): number;
+    get days(): number;
+    get hours(): number;
+    get minutes(): number;
+    get seconds(): number;
+    get milliseconds(): number;
+    set years(v: number);
+    set months(v: number);
+    set days(v: number);
+    set hours(v: number);
+    set minutes(v: number);
+    set seconds(v: number);
+    set milliseconds(v: number);
+    toPostgres(): string;
     toEpoch(): number | undefined;
     getKey(): string | undefined;
-    getValue(): number | (() => string) | undefined;
+    getValue(): number | undefined;
 }
 export declare function interval2string(interval?: {
     [x: string]: number;

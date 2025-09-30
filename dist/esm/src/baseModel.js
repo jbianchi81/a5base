@@ -1,7 +1,7 @@
 'use strict';
 import fs from 'promise-fs';
 import YAML from 'yaml';
-import CSV from 'csv-string';
+import { parse, stringify } from 'csv-string';
 import { isIterable, delay, control_filter2 } from './utils';
 import { Interval, interval2string } from './timeSteps';
 import Geometry from './geometry';
@@ -156,7 +156,7 @@ export class baseModel {
         var parsed_content;
         if (input_format == "csv") {
             var content = fs.readFileSync(input_file, 'utf-8');
-            parsed_content = CSV.parse(content, { output: "objects" });
+            parsed_content = parse(content, { output: "objects" });
         }
         else {
             var content = fs.readFileSync(input_file, 'utf-8');
@@ -421,7 +421,7 @@ export class baseModel {
                 }
             }
         }
-        return CSV.stringify(rows).replace(/\r\n$/, "");
+        return stringify(rows).replace(/\r\n$/, "");
     }
     /**
      *
@@ -452,7 +452,7 @@ export class baseModel {
             }
         }
         rows.push(row);
-        return CSV.stringify(rows).replace(/\r\n$/, "");
+        return stringify(rows).replace(/\r\n$/, "");
     }
     getOne(key) {
         return this[key];
@@ -481,7 +481,7 @@ export class baseModel {
             throw ("Missing constructor._fields for class " + this.name);
         }
         const columns_arr = (columns) ? columns : Object.keys(this._fields);
-        const rows = CSV.parse(row_csv_string, separator);
+        const rows = parse(row_csv_string, separator);
         if (!rows.length) {
             throw new Error("No content found in CSV file");
         }

@@ -10,13 +10,13 @@ interface WriteableModel {
     valor?: string | Uint8Array | Buffer | number | number[];
     prototype?: string | string[];
 }
-interface ModelField {
+export interface ModelField {
     child?: any;
     class?: new () => void;
     foreign_key?: boolean | {
         [x: string]: string;
     };
-    type: "string" | "object" | "number" | "boolean" | "geometry" | "integer" | "timestamp" | "date";
+    type: "string" | "object" | "number" | "boolean" | "geometry" | "integer" | "timestamp" | "date" | "buffer" | "any";
     table?: string;
     column?: string;
     primary_key?: boolean;

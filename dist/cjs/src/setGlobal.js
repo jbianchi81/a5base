@@ -16,14 +16,16 @@ function setGlobal() {
         g.config = config_1.default;
         const c = g.config;
         if (!("database" in c)) {
-            throw ("Missing config.database");
+            console.warn("Missing config.database. Not starting pool.");
         }
-        if (!c.database.idleTimeoutMillis) {
-            c.database.idleTimeoutMillis = 1000;
-        }
-        g.pool = new pg_1.Pool(c.database);
-        if (!g.dbConnectionString) {
-            g.dbConnectionString = "host=" + c.database.host + " user=" + c.database.user + " dbname=" + c.database.database + " password=" + c.database.password + " port=" + c.database.port;
+        else {
+            if (!c.database.idleTimeoutMillis) {
+                c.database.idleTimeoutMillis = 1000;
+            }
+            g.pool = new pg_1.Pool(c.database);
+            if (!g.dbConnectionString) {
+                g.dbConnectionString = "host=" + c.database.host + " user=" + c.database.user + " dbname=" + c.database.database + " password=" + c.database.password + " port=" + c.database.port;
+            }
         }
         // if (!Promise.allSettled) {
         //     Promise.allSettled = (promises : Promise<any>[]) =>

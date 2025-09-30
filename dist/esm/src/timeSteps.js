@@ -1,4 +1,6 @@
-import parsePGinterval from 'postgres-interval';
+// import parsePGinterval from 'postgres-interval'
+import PostgresInterval from 'postgres-interval';
+// type IntervalObject = ReturnType<typeof interval>;
 function isJson(str) {
     try {
         JSON.parse(str);
@@ -28,19 +30,28 @@ const interval_key_map = {
 export function intervalFromString(interval_string) {
     const kvp = interval_string.split(/\s+/);
     if (kvp.length > 1) {
-        var interval = parsePGinterval();
+        var interval = PostgresInterval("");
+        const dict = {};
         for (var i = 0; i < kvp.length - 1; i = i + 2) {
             var key = interval_key_map[kvp[i + 1].toLowerCase()];
             if (!key) {
                 throw ("Invalid interval key " + kvp[i + 1].toLowerCase());
             }
-            if (key != "toPostgres") {
-                interval[key] = parseInt(kvp[i]);
-            }
+            dict[key] = parseInt(kvp[i]);
+            // if(key != "toPostgres") {
+            // 	interval[key] = parseInt(kvp[i]!) as number
+            // }
         }
+        interval.years = dict.years || 0;
+        interval.months = dict.months || 0;
+        interval.days = dict.days || 0;
+        interval.hours = dict.hours || 0;
+        interval.minutes = dict.minutes || 0;
+        interval.seconds = dict.seconds || 0;
+        interval.milliseconds = dict.milliseconds || 0;
     }
     else {
-        var interval = parsePGinterval(interval_string);
+        var interval = PostgresInterval(interval_string);
     }
     // Object.assign(interval,JSON.parse(value))
     return interval;
@@ -50,12 +61,12 @@ export function createInterval(value) {
         return; //  parsePGinterval()
     }
     if (value.constructor && value.constructor.name == 'PostgresInterval') {
-        var interval = parsePGinterval();
+        var interval = PostgresInterval("");
         Object.assign(interval, value);
         return interval;
     }
     if (value instanceof Object) {
-        var interval = parsePGinterval();
+        var interval = PostgresInterval("");
         Object.keys(value).map(k => {
             switch (k) {
                 case "milliseconds":
@@ -95,7 +106,7 @@ export function createInterval(value) {
     }
     if (typeof value == 'string') {
         if (isJson(value)) {
-            var interval = parsePGinterval();
+            var interval = PostgresInterval("");
             Object.assign(interval, JSON.parse(value));
             return interval;
         }
@@ -161,7 +172,7 @@ export function interval2epochSync(interval) {
 }
 export class Interval {
     constructor(intervalstr) {
-        this.interval = parsePGinterval(intervalstr);
+        this.interval = PostgresInterval(intervalstr);
         const values = createInterval(intervalstr);
         Object.assign(this.interval, values);
     }
@@ -172,13 +183,26 @@ export class Interval {
     get minutes() { return this.interval.minutes; }
     get seconds() { return this.interval.seconds; }
     get milliseconds() { return this.interval.milliseconds; }
+    set years(v) { this.interval.years = v; }
+    set months(v) { this.interval.months = v; }
+    set days(v) { this.interval.days = v; }
+    set hours(v) { this.interval.hours = v; }
+    set minutes(v) { this.interval.minutes = v; }
+    set seconds(v) { this.interval.seconds = v; }
+    set milliseconds(v) { this.interval.milliseconds = v; }
+    toPostgres() {
+        return this.interval.toPostgres();
+    }
     toEpoch() {
         return interval2epochSync(this);
     }
     getKey() {
         for (var key of Object.keys(this.interval)) {
+            if (key == "toPostgres") {
+                continue;
+            }
             const k = key;
-            if (k != "toPostgres" && this.interval[k] && this.interval[k] > 0) {
+            if (this.interval[k] && this.interval[k] > 0) {
                 return key;
             }
         }
