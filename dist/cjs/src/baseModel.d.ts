@@ -1,4 +1,7 @@
 import fs from 'promise-fs';
+import { IntervalDict } from './timeSteps';
+import { A5Config } from './setGlobal';
+import { Pool, PoolClient } from 'pg';
 type AnyClass = {
     toCSV?(): string;
     valor?: string | Uint8Array | Buffer | number | number[];
@@ -16,11 +19,12 @@ export interface ModelField {
     foreign_key?: boolean | {
         [x: string]: string;
     };
-    type: "string" | "object" | "number" | "boolean" | "geometry" | "integer" | "timestamp" | "date" | "buffer" | "any";
+    type: "string" | "object" | "number" | "boolean" | "geometry" | "integer" | "timestamp" | "date" | "buffer" | "any" | "interval";
     table?: string;
     column?: string;
     primary_key?: boolean;
 }
+type Coercible<T> = T extends Date ? Date | string : T extends number ? number | string : T extends boolean ? boolean | string : T extends IntervalDict ? IntervalDict | string : T;
 export declare function writeModelToFile(model: WriteableModel, output_file: string, output_format: string): Promise<void>;
 type AnyModel<T = AnyClass> = {
     new (...args: any[]): T;
@@ -37,6 +41,8 @@ interface ReadFileOptions {
 }
 export declare function readModelFromFile(model_class: AnyModel, input_file: string, input_format: string, options?: ReadFileOptions): AnyClass | AnyClass[];
 export declare class baseModel {
+    static _config: A5Config | undefined;
+    static _pool: Pool | undefined;
     writeFile(output_file: string, output_format: string): Promise<void>;
     static readFile(input_file: string, input_format: string, options: ReadFileOptions): AnyClass | AnyClass[];
     static createFromFile(input_file: any, input_format: any, options: any): Promise<AnyClass | (AnyClass | AnyClass[])[]>;
@@ -50,7 +56,7 @@ export declare class baseModel {
         property_name?: string;
     }): Promise<baseModel[]>;
     constructor(fields?: {});
-    static sanitizeValue(value: string | number | any[] | Date | null, definition?: {
+    static sanitizeValue(value: string | number | any[] | Date | IntervalDict | null, definition?: {
         class?: any;
         type?: any;
         items?: any;
@@ -67,8 +73,10 @@ export declare class baseModel {
     }, key_value_pairs: {
         [x: string]: any;
     }): any;
-    setOne<K extends keyof this>(prop: K, value: this[K]): void;
-    set<K extends keyof this>(key_value_pairs?: Partial<Pick<this, K>>): void;
+    setOne<K extends Extract<keyof this, string>>(prop: K, value: Coercible<this[K]>): void;
+    set<T extends this>(key_value_pairs?: Partial<{
+        [K in keyof T]: Coercible<T[K]>;
+    }>): void;
     /**
      *
      * @param {object[]} data - list of instances of this class (or objects parseable into it)
@@ -134,11 +142,25 @@ export declare class baseModel {
     update(changes?: {}): Promise<this>;
     static delete(filter?: {}): Promise<baseModel[]>;
     partial(columns?: (keyof this)[]): baseModel;
-    static _table_name: undefined;
+    static _table_name: string;
     static _fields: {
         [x: string]: ModelField;
     };
     static _additional_filters: {};
+    get pool(): Pool;
+    static get pool(): Pool;
+    interval2epoch(interval: IntervalDict | string | undefined): Promise<any>;
+    /**
+     * execute pg query
+     * @param {string} query_string
+     * @param {Array|undefined} query_args
+     * @param {Client|undefined} client
+     * @param {Boolean} [release_client=false] - if true, when the query fails it releases the provided client before throwing error
+     * @returns {Promise<Object[]>} promise to an array representing the query result rows
+     */
+    static executeQueryReturnRows(query_string: string, query_args?: any[], client?: PoolClient, release_client?: boolean): Promise<{
+        [x: string]: any;
+    }[]>;
 }
 export declare class BaseArray<Type> extends Array {
     create(): Promise<Type[]>;

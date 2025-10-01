@@ -3,7 +3,7 @@ import fs from 'promise-fs';
 import YAML from 'yaml';
 import { parse, stringify } from 'csv-string';
 import { isIterable, delay, control_filter2 } from './utils';
-import { Interval, interval2string } from './timeSteps';
+import { createInterval, interval2string } from './timeSteps';
 import Geometry from './geometry';
 import setGlobal from './setGlobal';
 const g = setGlobal();
@@ -214,7 +214,7 @@ export class baseModel {
                     return parseFloat(value.toString());
                 }
                 else if (definition.type == "interval") {
-                    return new Interval(value.toString());
+                    return createInterval(value);
                 }
                 else if (definition.type == "object") {
                     if (typeof value == "string" && value.length) {
@@ -345,7 +345,7 @@ export class baseModel {
                 console.error("Couldn't find parent row in table " + foreign_key_fields[key].class._table_name);
                 continue;
             }
-            this.setOne(k, parent[0]);
+            this[k] = parent[0];
         }
     }
     getParentFields(field, key_value_pairs) {
@@ -363,9 +363,12 @@ export class baseModel {
         return parent_fields;
     }
     setOne(prop, value) {
+        // setOne<K extends keyof this>(prop: K, value: this[K]) {
         this[prop] = value;
     }
     set(key_value_pairs = {}) {
+        // }
+        // set<K extends keyof this>(key_value_pairs : Partial<Pick<this,K>>={}) {
         const foreign_key_fields = this.constructor.getForeignKeyFields();
         const foreign_key_columns = Object.keys(foreign_key_fields).map(k => foreign_key_fields[k].column);
         for (const key in key_value_pairs) {
@@ -378,15 +381,15 @@ export class baseModel {
                     }
                     for (const k in foreign_key_fields) {
                         if (foreign_key_fields[k].column == key) {
-                            const fk_fields = this.getParentFields(foreign_key_fields[k], key_value_pairs);
-                            this.setOne(key, new foreign_key_fields[k].class(fk_fields));
+                            // this.setOne(key, new foreign_key_fields[k].class(fk_fields))
+                            this[key] = new foreign_key_fields[k].class(this.getParentFields(foreign_key_fields[k], key_value_pairs));
                             break;
                         }
                     }
                 }
                 else {
                     try {
-                        this.setOne(key, this.constructor.sanitizeValue(key_value_pairs[key], this.constructor._fields[key]));
+                        this[key] = this.constructor.sanitizeValue(key_value_pairs[key], this.constructor._fields[key]);
                     }
                     catch (e) {
                         throw (new Error("Can't set property '" + key + "'. " + e.toString()));
@@ -581,10 +584,7 @@ export class baseModel {
         const statement = this.build_insert_statement();
         // console.log(statement.string)
         // console.log(statement.params)
-        if (!g.pool) {
-            throw new Error("global.pool must be set");
-        }
-        const result = await g.pool.query(statement.string, statement.params);
+        const result = await this.pool.query(statement.string, statement.params);
         if (!result.rows.length) {
             throw ("nothing inserted");
         }
@@ -606,10 +606,7 @@ export class baseModel {
      */
     static async read(filter = {}, options = {}) {
         var statement = this.build_read_statement(filter);
-        if (!g.pool) {
-            throw new Error("global.pool must be set");
-        }
-        const result = await g.pool.query(statement);
+        const result = await this.pool.query(statement);
         return result.rows.map((r) => new this(r));
     }
     build_update_query(update_keys = []) {
@@ -756,11 +753,8 @@ export class baseModel {
             // console.error("Nothing set to update")
             return this;
         }
-        if (!g.pool) {
-            throw new Error("Must start global.pool");
-        }
         try {
-            var result = await g.pool.query(statement.string, statement.params);
+            var result = await this.pool.query(statement.string, statement.params);
         }
         catch (e) {
             throw (e);
@@ -781,10 +775,7 @@ export class baseModel {
             throw new Error("At least one filter required for delete action");
         }
         const returning = this.getColumns();
-        if (!g.pool) {
-            throw new Error("Must start global.pool");
-        }
-        var result = await g.pool.query(`DELETE FROM "${this._table_name}" WHERE 1=1 ${filter_string} RETURNING ${returning.join(",")}`);
+        var result = await this.pool.query(`DELETE FROM "${this._table_name}" WHERE 1=1 ${filter_string} RETURNING ${returning.join(",")}`);
         return result.rows.map((r) => new this(r));
     }
     partial(columns = []) {
@@ -795,8 +786,84 @@ export class baseModel {
         const ctor = this.constructor;
         return new ctor(partial);
     }
+    get pool() {
+        if (!baseModel._pool) {
+            throw new Error("Database connection not established");
+        }
+        return baseModel._pool;
+    }
+    static get pool() {
+        if (!this._pool) {
+            throw new Error("Database connection not established");
+        }
+        return this._pool;
+    }
+    async interval2epoch(interval) {
+        if (interval instanceof Object) {
+            interval = interval2string(interval);
+        }
+        if (!interval) {
+            return 0;
+        }
+        return this.pool.query("SELECT extract(epoch from $1::interval) AS epoch", [interval.toString()])
+            .then(result => {
+            return result.rows[0].epoch;
+        });
+    }
+    /**
+     * execute pg query
+     * @param {string} query_string
+     * @param {Array|undefined} query_args
+     * @param {Client|undefined} client
+     * @param {Boolean} [release_client=false] - if true, when the query fails it releases the provided client before throwing error
+     * @returns {Promise<Object[]>} promise to an array representing the query result rows
+     */
+    static async executeQueryReturnRows(query_string, query_args, client, release_client) {
+        if (!query_string) {
+            throw new Error("missing query string");
+        }
+        if (client) {
+            if (query_args) {
+                try {
+                    var result = await client.query(query_string, query_args);
+                }
+                catch (e) {
+                    if (release_client) {
+                        client.query("ROLLBACK");
+                        client.release();
+                    }
+                    throw (e);
+                }
+            }
+            else {
+                try {
+                    var result = await client.query(query_string);
+                }
+                catch (e) {
+                    if (release_client) {
+                        client.query("ROLLBACK");
+                        client.release();
+                    }
+                    throw (e);
+                }
+            }
+            // if(release_client) {
+            // 	client.release()
+            // }
+        }
+        else {
+            if (query_args) {
+                var result = await this.pool.query(query_string, query_args);
+            }
+            else {
+                var result = await this.pool.query(query_string);
+            }
+        }
+        return result.rows;
+    }
 }
-baseModel._table_name = undefined;
+baseModel._config = g.config;
+baseModel._pool = g.pool;
 baseModel._fields = {};
 baseModel._additional_filters = {};
 export class BaseArray extends Array {

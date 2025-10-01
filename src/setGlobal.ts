@@ -5,7 +5,7 @@ import config from 'config';
         
 interface Global {
     pool?: Pool
-    config?: any
+    config?: A5Config
     dbConnectionString?: string
     logPoolUsage?(): void
 }
@@ -24,7 +24,7 @@ interface LogPoolUsageConfig {
     interval: number
 }
 
-type A5Config = {
+export interface A5Config {
     database?: DBConfig
     log_pool_usage?: LogPoolUsageConfig
 }
@@ -35,8 +35,8 @@ export default function setGlobal() {
         // console.log("setting global.pool")
         process.env["NODE_CONFIG_DIR"] = path.resolve("config/")
         process.env["A5_BASE_DIR"] = path.resolve(".")
-        g.config = config
-        const c = g.config as A5Config
+        g.config = config as A5Config
+        const c = g.config
         if(!("database" in c)) {
             console.warn("Missing config.database. Not starting pool.")
         } else {

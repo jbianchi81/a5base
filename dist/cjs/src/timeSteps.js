@@ -237,7 +237,8 @@ function interval2string(interval) {
         else {
             var string = "";
             Object.keys(interval).forEach(key => {
-                string += interval[key] + " " + key + " ";
+                const k = key;
+                string += interval[k] + " " + key + " ";
             });
             return string.replace(/\s$/, "");
         }

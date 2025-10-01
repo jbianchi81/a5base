@@ -1,4 +1,13 @@
 import PostgresInterval from 'postgres-interval';
+export interface IntervalDict {
+    years?: number;
+    months?: number;
+    days?: number;
+    hours?: number;
+    minutes?: number;
+    seconds?: number;
+    milliseconds?: number;
+}
 export declare function intervalFromString(interval_string: string): PostgresInterval.IPostgresInterval;
 export declare function createInterval(value: any): PostgresInterval.IPostgresInterval | undefined;
 export declare function interval2epochSync(interval?: any): number | undefined;
@@ -24,6 +33,4 @@ export declare class Interval {
     getKey(): string | undefined;
     getValue(): number | undefined;
 }
-export declare function interval2string(interval?: {
-    [x: string]: number;
-} | string): string;
+export declare function interval2string(interval?: IntervalDict | string): string;

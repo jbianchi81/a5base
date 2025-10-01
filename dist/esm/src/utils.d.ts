@@ -13,3 +13,4 @@ export declare function control_filter2(valid_filters: {
 }, filter: {
     [x: string]: any;
 }, default_table?: string, crud?: any, throw_on_error?: boolean): string | null;
+export declare function pasteIntoSQLQuery(query: string, params: any[]): string;

@@ -32,10 +32,15 @@ var __importStar = (this && this.__importStar) || (function () {
         return result;
     };
 })();
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.geometry = exports.setGlobal = exports.timeSteps = exports.utils = exports.baseModel = void 0;
+exports.Variable = exports.geometry = exports.setGlobal = exports.timeSteps = exports.utils = exports.baseModel = void 0;
 exports.baseModel = __importStar(require("./baseModel"));
 exports.utils = __importStar(require("./utils"));
 exports.timeSteps = __importStar(require("./timeSteps"));
 exports.setGlobal = __importStar(require("./setGlobal"));
 exports.geometry = __importStar(require("./geometry"));
+var variable_1 = require("./variable");
+Object.defineProperty(exports, "Variable", { enumerable: true, get: function () { return __importDefault(variable_1).default; } });

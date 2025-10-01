@@ -4,10 +4,11 @@ import fs from 'promise-fs';
 import YAML from 'yaml';
 import {parse, stringify} from 'csv-string';
 import {isIterable, delay, control_filter2} from './utils';
-import { Interval, interval2string } from './timeSteps';
+import { createInterval, Interval, interval2string, IntervalDict } from './timeSteps';
 import Geometry from './geometry';
 import { Comma } from 'csv-string/dist/types';
-import setGlobal from './setGlobal'
+import setGlobal, {A5Config} from './setGlobal'
+import { Pool, PoolClient } from 'pg';
 
 const g = setGlobal()
 
@@ -31,7 +32,7 @@ export interface ModelField {
 	child?: any;
 	class?: new () => void;
     foreign_key?: boolean | {[x: string]: string}
-    type: "string" | "object" | "number" | "boolean" | "geometry" | "integer" | "timestamp" | "date" | "buffer" | "any"
+    type: "string" | "object" | "number" | "boolean" | "geometry" | "integer" | "timestamp" | "date" | "buffer" | "any" | "interval"
     table?: string
     column?: string
     primary_key?: boolean
@@ -42,6 +43,14 @@ interface ClassModelField {
 	foreign_key: {[x: string]: any}
 	column: string
 }
+
+type Coercible<T> =
+  T extends Date ? Date | string :
+  T extends number ? number | string :
+  T extends boolean ? boolean | string :
+  T extends IntervalDict ? IntervalDict | string : 
+  T;
+
 
 export async function writeModelToFile(model: WriteableModel, output_file : string, output_format : string) {
 	if(!model) {
@@ -165,6 +174,10 @@ export function readModelFromFile(
 }
 
 export class baseModel {
+
+	static _config : A5Config | undefined = g.config
+	static _pool : Pool | undefined = g.pool
+
 	async writeFile(output_file : string, output_format : string) {
 		return writeModelToFile(this,output_file,output_format)
     }
@@ -219,8 +232,12 @@ export class baseModel {
         this.set(empty_fields)
 		this.set(fields)
 	}
-	static sanitizeValue(value: string | number | any[] | Date | null,definition : {
-        class?: any;type?: any, items?: any }={}) {
+	static sanitizeValue(
+		value: string | number | any[] | Date | IntervalDict | null,
+		definition : {
+        	class?: any;type?: any, items?: any 
+		}={}) 
+		{
 		if(value == null) {
 			return value	
 		} else {
@@ -247,7 +264,7 @@ export class baseModel {
 					}
 					return parseFloat(value.toString())
 				} else if (definition.type == "interval") {
-					return new Interval(value.toString())
+					return createInterval(value)
 				} else if (definition.type == "object") {
 					if(typeof value == "string" && value.length) {
 						try {
@@ -364,7 +381,7 @@ export class baseModel {
 				console.error("Couldn't find parent row in table " + foreign_key_fields[key].class._table_name)
 				continue
 			}
-			this.setOne(k,  parent[0])
+			(this as any)[k] = parent[0]
 		}
 	}
 
@@ -382,11 +399,14 @@ export class baseModel {
 		return parent_fields
 	}
 
-    setOne<K extends keyof this>(prop: K, value: this[K]) {
-        this[prop] = value;
+    setOne<K extends Extract<keyof this,string>>(prop: K, value: Coercible<this[K]>) {
+    // setOne<K extends keyof this>(prop: K, value: this[K]) {
+        (this as any)[prop] = value;
     }
-
-	set<K extends keyof this>(key_value_pairs : Partial<Pick<this,K>>={}) {
+	set<T extends this>(
+		key_value_pairs : Partial<{ [K in keyof T]: Coercible<T[K]>}>={}) {
+	// }
+	// set<K extends keyof this>(key_value_pairs : Partial<Pick<this,K>>={}) {
 		const foreign_key_fields : any = (this.constructor as typeof baseModel).getForeignKeyFields()
 		const foreign_key_columns = Object.keys(foreign_key_fields).map(k=>foreign_key_fields[k].column)
 		for(const key in key_value_pairs) {
@@ -399,14 +419,14 @@ export class baseModel {
                     }
                     for(const k in foreign_key_fields) {
                         if(foreign_key_fields[k].column == key) {
-                            const fk_fields = this.getParentFields(foreign_key_fields[k],key_value_pairs)
-                            this.setOne(key, new foreign_key_fields[k].class(fk_fields))
+                            // this.setOne(key, new foreign_key_fields[k].class(fk_fields))
+							(this as any)[key] = new foreign_key_fields[k].class(this.getParentFields(foreign_key_fields[k],key_value_pairs))
                             break
                         }
                     }
                 } else {
                     try { 
-                        this.setOne(key, (this.constructor as typeof baseModel).sanitizeValue(key_value_pairs[key] as string | number | any[] | Date | null,(this.constructor as typeof baseModel)._fields[key]))
+                        (this as any)[key] = (this.constructor as typeof baseModel).sanitizeValue(key_value_pairs[key],(this.constructor as typeof baseModel)._fields[key])
                     } catch(e) {
                         throw(new Error("Can't set property '" + key + "'. " + (e as string).toString()))
                     }
@@ -592,10 +612,7 @@ export class baseModel {
 		const statement = this.build_insert_statement()
 		// console.log(statement.string)
 		// console.log(statement.params)
-		if(!g.pool) {
-			throw new Error("global.pool must be set")
-		}
-		const result = await g.pool.query(statement.string,statement.params)
+		const result = await this.pool.query(statement.string,statement.params)
 		if(!result.rows.length) {
 			throw("nothing inserted")
 		}
@@ -620,12 +637,10 @@ export class baseModel {
 		options: any={}
 	) {
 		var statement = this.build_read_statement(filter)
-		if(!g.pool) {
-			throw new Error("global.pool must be set")
-		}
-		const result = await g.pool.query(statement)
+		const result = await this.pool.query(statement)
 		return result.rows.map((r: {} | undefined)=>new this(r))
 	}
+
 	build_update_query<T = Partial<this>>(update_keys : (keyof T)[]=[]) : {
 		string: string;
 		params: T[keyof T][];
@@ -766,11 +781,8 @@ export class baseModel {
 			// console.error("Nothing set to update")
 			return this
 		}
-		if(!g.pool) {
-			throw new Error("Must start global.pool")
-		}
 		try {
-			var result = await g.pool.query(statement.string,statement.params)
+			var result = await this.pool.query(statement.string,statement.params)
 		} catch(e) {
 			throw(e)
 		}
@@ -791,10 +803,7 @@ export class baseModel {
 			throw new Error("At least one filter required for delete action")
 		}
 		const returning = this.getColumns()
-		if(!g.pool)  {
-			throw new Error("Must start global.pool")
-		}
-		var result = await g.pool.query(`DELETE FROM "${this._table_name}" WHERE 1=1 ${filter_string} RETURNING ${returning.join(",")}`)
+		var result = await this.pool.query(`DELETE FROM "${this._table_name}" WHERE 1=1 ${filter_string} RETURNING ${returning.join(",")}`)
 		return result.rows.map((r: {} | undefined)=>new this(r))
 	}
 
@@ -807,9 +816,89 @@ export class baseModel {
 		return new ctor(partial)
 	}
 
-	static _table_name = undefined
+	static _table_name : string
 	static _fields : { [x : string]: ModelField }= {}
 	static _additional_filters = {}
+
+	get pool(): Pool {
+		if(!baseModel._pool) {
+			throw new Error("Database connection not established")
+		}
+		return baseModel._pool
+	}
+
+	static get pool(): Pool {
+		if(!this._pool) {
+			throw new Error("Database connection not established")
+		}
+		return this._pool
+	}
+
+	async interval2epoch(interval : IntervalDict | string | undefined) {
+		if(interval instanceof Object) {
+			interval = interval2string(interval)
+		}
+		if(!interval) {
+			return 0
+		} 
+		return this.pool.query("SELECT extract(epoch from $1::interval) AS epoch",[interval.toString()])
+		.then(result=>{
+			return result.rows[0].epoch
+		})
+	}
+
+	/**
+	 * execute pg query
+	 * @param {string} query_string 
+	 * @param {Array|undefined} query_args 
+	 * @param {Client|undefined} client 
+	 * @param {Boolean} [release_client=false] - if true, when the query fails it releases the provided client before throwing error
+	 * @returns {Promise<Object[]>} promise to an array representing the query result rows
+	 */
+	static async executeQueryReturnRows(
+		query_string : string,
+		query_args? : any[],
+		client? : PoolClient,
+		release_client? : boolean) : Promise<{[x : string]: any}[]>{
+		if(!query_string) {
+			throw new Error("missing query string")
+		}
+		if(client)  {
+			if(query_args) {
+				try {
+					var result = await client.query(query_string,query_args)
+				} catch(e) {
+					if(release_client) {
+						client.query("ROLLBACK")
+						client.release()
+					}
+					throw(e)
+				}
+			} else {
+				try {
+					var result = await client.query(query_string)
+				} catch(e) {
+					if(release_client) {
+						client.query("ROLLBACK")
+						client.release()
+					}
+					throw(e)
+				}
+			}
+			// if(release_client) {
+			// 	client.release()
+			// }
+		} else {
+			if(query_args) {
+				var result = await this.pool.query(query_string,query_args)
+			} else {
+				var result = await this.pool.query(query_string)
+			}
+		}
+		return result.rows
+	}
+
+
 }
 
 export class BaseArray<Type> extends Array {
@@ -826,4 +915,5 @@ export class BaseArray<Type> extends Array {
 	static readFile(input_file: any,input_format: any,options: any) {
 		return readModelFromFile(BaseArray,input_file,input_format,options)
 	}
+
 }

@@ -1,5 +1,6 @@
 import Geometry from './geometry';
 import { createInterval } from './timeSteps';
+import { escapeLiteral } from 'pg';
 export async function delay(t, val) {
     return new Promise(function (resolve) {
         setTimeout(function () {
@@ -261,4 +262,50 @@ export function control_filter2(valid_filters, filter, default_table, crud, thro
     else {
         return filter_string;
     }
+}
+export function pasteIntoSQLQuery(query, params) {
+    for (var i = params.length - 1; i >= 0; i--) {
+        var value;
+        switch (typeof params[i]) {
+            case "string":
+                value = escapeLiteral(params[i]);
+                break;
+            case "number":
+                value = parseFloat(params[i]);
+                if (value.toString() == "NaN") {
+                    throw (new Error("Invalid number"));
+                }
+                break;
+            case "object":
+                if (params[i] instanceof Date) {
+                    value = "'" + params[i].toISOString() + "'::timestamptz::timestamp";
+                }
+                else if (params[i] instanceof Array) {
+                    // if(/';/.test(params[i].join(","))) {
+                    // 	throw("Invalid value: contains invalid characters")
+                    // }
+                    value = escapeLiteral(`{${params[i].join(",")}}`); // .map(v=> (typeof v == "number") ? v : "'" + v.toString() + "'")
+                }
+                else if (params[i] === null) {
+                    value = "NULL";
+                }
+                else if (params[i].constructor && params[i].constructor.name == 'PostgresInterval') {
+                    value = `${escapeLiteral(params[i].toPostgres())}::interval`;
+                }
+                else {
+                    value = escapeLiteral(params[i].toString());
+                }
+                break;
+            case "undefined":
+                value = "NULL";
+                break;
+            default:
+                value = escapeLiteral(params[i].toString());
+        }
+        var I = parseInt(i.toString()) + 1;
+        var placeholder = "\\$" + I.toString();
+        // console.log({placeholder:placeholder,value:value})
+        query = query.replace(new RegExp(placeholder, "g"), value.toString());
+    }
+    return query;
 }

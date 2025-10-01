@@ -29,7 +29,7 @@ const interval_key_map : { [x: string] : keyof IntervalDict }= {
 	year: "years"
 }
 
-interface IntervalDict {
+export interface IntervalDict {
     years?: number;
     months?: number;
     days?: number;
@@ -234,7 +234,7 @@ export class Interval {
 	}
 }
 
-export function interval2string(interval? : {[x : string] : number } | string) {
+export function interval2string(interval? : IntervalDict | string) {
 	if(!interval) {
 		return "00:00:00"
 	}
@@ -244,7 +244,8 @@ export function interval2string(interval? : {[x : string] : number } | string) {
 		} else {
 			var string = ""
 			Object.keys(interval).forEach(key=>{
-				string += interval[key] + " " + key + " "
+				const k = key as keyof IntervalDict
+				string += interval[k] + " " + key + " "
 			})
 			return string.replace(/\s$/,"")
 		}
