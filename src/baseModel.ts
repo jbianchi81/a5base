@@ -7,7 +7,8 @@ import {isIterable, delay, control_filter2} from './utils';
 import { createInterval, Interval, interval2string, IntervalDict } from './timeSteps';
 import Geometry from './geometry';
 import { Comma } from 'csv-string/dist/types';
-import setGlobal, {A5Config} from './setGlobal'
+import setGlobal from './setGlobal'
+import A5Config from './a5Config'
 import { Pool, PoolClient } from 'pg';
 
 const g = setGlobal()

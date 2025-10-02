@@ -1,6 +1,6 @@
 import fs from 'promise-fs';
 import { IntervalDict } from './timeSteps';
-import { A5Config } from './setGlobal';
+import A5Config from './a5Config';
 import { Pool, PoolClient } from 'pg';
 type AnyClass = {
     toCSV?(): string;

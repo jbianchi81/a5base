@@ -1,25 +1,10 @@
 import { Pool } from 'pg';
+import A5Config from './a5Config';
 interface Global {
     pool?: Pool;
     config?: A5Config;
     dbConnectionString?: string;
     logPoolUsage?(): void;
-}
-interface DBConfig {
-    idleTimeoutMillis?: number;
-    host: string;
-    database: string;
-    user: string;
-    password: string;
-    port: number;
-}
-interface LogPoolUsageConfig {
-    activate: boolean;
-    interval: number;
-}
-export interface A5Config {
-    database?: DBConfig;
-    log_pool_usage?: LogPoolUsageConfig;
 }
 export default function setGlobal(): Global;
 export {};
