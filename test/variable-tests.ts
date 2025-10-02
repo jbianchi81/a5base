@@ -61,8 +61,18 @@ test('variable read', async(t : any) => {
 
     const variables = await Variable.read({},{})
     assert(variables.length > 0)
-    console.log("✅ All tests passed!");
+})
 
+test('variable read by id', async(t : any) => {
+
+    const variable = await Variable.read(1)
+    assert.equal(variable!.id,1)
+})
+
+test('variable read nonexistent id', async(t : any) => {
+    const variable = await Variable.read(145657)
+    assert.equal(typeof variable, "undefined")
+    console.log("✅ All tests passed!");
 })
 
 

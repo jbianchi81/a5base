@@ -15,12 +15,6 @@ export interface VariableFields {
     timeSupport?: Interval;
     def_hora_corte?: Interval;
 }
-interface ReadFilter {
-    id?: number | undefined;
-    VariableName?: string | undefined;
-    timeSupport?: IntervalDict | string | undefined;
-    datatype?: string | undefined;
-}
 export default class Variable extends baseModel {
     id: number | undefined;
     var: string | undefined;
@@ -61,10 +55,10 @@ export default class Variable extends baseModel {
     };
     static upsertVarQuery(variable: Variable): string;
     create(): Promise<this>;
-    static read(filter: ReadFilter | undefined, options: {}): Promise<Variable[]>;
+    static read(filter: object, options?: object): Promise<Variable[]>;
+    static read(id: number, options?: object): Promise<Variable | undefined>;
     find(): Promise<Variable | undefined>;
     update(changes?: {}): Promise<this>;
     static delete(filter?: {}, options?: {}): Promise<Variable[]>;
     delete(): Promise<Variable | undefined>;
 }
-export {};

@@ -54,6 +54,14 @@ test('set', async (t) => {
 test('variable read', async (t) => {
     const variables = await variable_1.default.read({}, {});
     (0, assert_1.default)(variables.length > 0);
+});
+test('variable read by id', async (t) => {
+    const variable = await variable_1.default.read(1);
+    assert_1.default.equal(variable.id, 1);
+});
+test('variable read nonexistent id', async (t) => {
+    const variable = await variable_1.default.read(145657);
+    assert_1.default.equal(typeof variable, "undefined");
     console.log("✅ All tests passed!");
 });
 // run with:  

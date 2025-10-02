@@ -1,12 +1,12 @@
 import { Point, Polygon, Position } from 'geojson';
 interface GeometryDict {
-    type: "Point" | "Polygon" | "Multipolygon";
+    type: "Point" | "Polygon";
     coordinates: Position | Position[][];
 }
 export default class Geometry {
-    type: "Point" | "Polygon" | "Multipolygon";
+    type: "Point" | "Polygon";
     coordinates: Position | Position[][];
-    constructor(type: "Point" | "Polygon" | "Multipolygon", coordinates: Position | Position[][]);
+    constructor(type: "Point" | "Polygon", coordinates: Position | Position[][]);
     constructor(type: "BOX", coordinates: number[]);
     constructor(type: "BOX", coordinates: string);
     constructor(wkt: string);

@@ -127,7 +127,8 @@ export declare class baseModel {
      * @param {Object} options
      * @returns
      */
-    static read(filter?: object, options?: any): Promise<baseModel[]>;
+    static read(filter: object, options?: object): Promise<baseModel[]>;
+    static read(id: number, options?: object): Promise<baseModel | undefined>;
     build_update_query<T = Partial<this>>(update_keys?: (keyof T)[]): {
         string: string;
         params: T[keyof T][];

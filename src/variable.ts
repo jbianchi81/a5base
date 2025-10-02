@@ -150,9 +150,11 @@ export default class Variable extends baseModel  {
 		return this
 	}
     
-	static async read(filter: ReadFilter={},options:{}) : Promise<Variable[]> {
-        if(filter.id && !Array.isArray(filter.id)) {
-			const id = filter.id
+	static async read(filter : object, options? : object) : Promise<Variable[]>
+	static async read(id : number, options? : object) : Promise<Variable|undefined>
+	static async read(filter: ReadFilter | number={},options?:{}) : Promise<Variable[]|Variable|undefined> {
+        if(typeof filter == "number") {
+			const id = filter
 		    if(id.toString() == "NaN") {
 			    throw(new Error("Invalid variable id. Must be integer"))
 		    }
@@ -173,12 +175,12 @@ export default class Variable extends baseModel  {
             FROM var\
             WHERE id=$1",[id])
             if(rows.length<=0) {
-                console.error("variable no encontrada")
-                return []
+                console.error("variable con id=" + id + " no encontrada")
+                return
             }
             const variable = new this(rows[0]!)
             variable.id = rows[0]!.id
-            return [variable]
+            return variable
         } else { 
             const valid_filters = {
                 id: {type: "numeric"}, 

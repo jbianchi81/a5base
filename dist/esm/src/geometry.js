@@ -7,17 +7,17 @@ function isNumberArray(value) {
     return Array.isArray(value) && value.every(item => typeof item === "number");
 }
 function isArrayOfNumberArray(value) {
-    return Array.isArray(value) && value.every(item => isNumberArray(typeof item === "number"));
+    return Array.isArray(value) && value.every(item => isNumberArray(item));
 }
 function isArrayOfArrayOfNumberArray(value) {
-    return Array.isArray(value) && value.every(item => isArrayOfNumberArray(typeof item === "number"));
+    return Array.isArray(value) && value.every(item => isArrayOfNumberArray(item));
 }
 export default class Geometry {
     constructor(arg1, coordinates) {
         // super()
         // console.log(JSON.stringify({geom_arguments:arguments}))
         if (typeof arg1 == "string") {
-            if (arg1 == "Point" || arg1 == "Polygon" || arg1 == "Multipolygon") {
+            if (arg1 == "Point" || arg1 == "Polygon") {
                 if (!coordinates) {
                     throw new Error("Missing coordinates");
                 }
@@ -68,10 +68,15 @@ export default class Geometry {
             else {
                 // WKT
                 try {
-                    var geom = wkt.read(arg1[0]).toJson();
+                    var geom = wkt.read(arg1).toJson();
                 }
                 catch (e) {
-                    throw new Error(e);
+                    if (e instanceof Error) {
+                        throw new Error("Invalid WKT geometry: " + e.message);
+                    }
+                    else {
+                        throw new Error("Invalid WKT geometry");
+                    }
                 }
                 this.type = geom.type;
                 this.coordinates = geom.coordinates;
@@ -107,7 +112,7 @@ export default class Geometry {
         }
         else if (this.type == "Polygon") {
             if (!isArrayOfArrayOfNumberArray(coords)) {
-                throw new Error("Invalid coordinates dimensions for MultiPolygon geometry");
+                throw new Error("Invalid coordinates dimensions for Polygon geometry");
             }
             return {
                 type: this.type,

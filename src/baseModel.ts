@@ -632,13 +632,25 @@ export class baseModel {
 	 * @param {Object} options
 	 * @returns 
 	 */
+	static async read(filter : object, options? : object) : Promise<baseModel[]>
+	static async read(id : number, options? : object) : Promise<baseModel|undefined>
 	static async read(
-		filter: object={},
-		options: any={}
-	) {
-		var statement = this.build_read_statement(filter)
-		const result = await this.pool.query(statement)
-		return result.rows.map((r: {} | undefined)=>new this(r))
+		filter: number | object={},
+		options?: object
+	) : Promise<baseModel | baseModel[] | undefined> {
+		if(typeof filter == "number") {
+			const statement  =this.build_read_statement({id: filter})
+			const result = await this.pool.query(statement)
+			if(!result.rows.length) {
+				console.error("Element with id=" + filter + " not found")
+				return
+			}
+			return new this(result.rows[0])
+		} else {
+			var statement = this.build_read_statement(filter)
+			const result = await this.pool.query(statement)
+			return result.rows.map((r: {} | undefined)=>new this(r))
+		}
 	}
 
 	build_update_query<T = Partial<this>>(update_keys : (keyof T)[]=[]) : {

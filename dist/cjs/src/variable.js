@@ -99,8 +99,8 @@ class Variable extends baseModel_1.baseModel {
         return this;
     }
     static async read(filter = {}, options) {
-        if (filter.id && !Array.isArray(filter.id)) {
-            const id = filter.id;
+        if (typeof filter == "number") {
+            const id = filter;
             if (id.toString() == "NaN") {
                 throw (new Error("Invalid variable id. Must be integer"));
             }
@@ -121,12 +121,12 @@ class Variable extends baseModel_1.baseModel {
             FROM var\
             WHERE id=$1", [id]);
             if (rows.length <= 0) {
-                console.error("variable no encontrada");
-                return [];
+                console.error("variable con id=" + id + " no encontrada");
+                return;
             }
             const variable = new this(rows[0]);
             variable.id = rows[0].id;
-            return [variable];
+            return variable;
         }
         else {
             const valid_filters = {

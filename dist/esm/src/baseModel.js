@@ -598,16 +598,21 @@ export class baseModel {
         const query_string = `SELECT ${columns.join(",")} FROM "${this._table_name}" WHERE 1=1 ${filters}`;
         return query_string;
     }
-    /**
-     *
-     * @param {Object} filter
-     * @param {Object} options
-     * @returns
-     */
-    static async read(filter = {}, options = {}) {
-        var statement = this.build_read_statement(filter);
-        const result = await this.pool.query(statement);
-        return result.rows.map((r) => new this(r));
+    static async read(filter = {}, options) {
+        if (typeof filter == "number") {
+            const statement = this.build_read_statement({ id: filter });
+            const result = await this.pool.query(statement);
+            if (!result.rows.length) {
+                console.error("Element with id=" + filter + " not found");
+                return;
+            }
+            return new this(result.rows[0]);
+        }
+        else {
+            var statement = this.build_read_statement(filter);
+            const result = await this.pool.query(statement);
+            return result.rows.map((r) => new this(r));
+        }
     }
     build_update_query(update_keys = []) {
         if (!this.constructor._table_name) {
