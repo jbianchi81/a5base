@@ -5,96 +5,112 @@ import bbox from '@turf/bbox';
 import * as turfHelpers from '@turf/helpers';
 
 import geojsonValidation from 'geojson-validation';
-import { Point, Polygon, MultiPolygon, Position } from 'geojson'
+import { Point, Polygon, Position } from 'geojson'
 
 function isNumberArray(value: unknown): value is number[] {
   return Array.isArray(value) && value.every(item => typeof item === "number");
 }
 
 function isArrayOfNumberArray(value: unknown): value is number[][] {
-  return Array.isArray(value) && value.every(item => isNumberArray(typeof item === "number"));
+  return Array.isArray(value) && value.every(item => isNumberArray(item));
 }
 
 function isArrayOfArrayOfNumberArray(value: unknown): value is number[][][] {
-  return Array.isArray(value) && value.every(item => isArrayOfNumberArray(typeof item === "number"));
+  return Array.isArray(value) && value.every(item => isArrayOfNumberArray(item));
 }
 
+interface GeometryDict {
+	type: "Point" | "Polygon"
+    coordinates : Position | Position[][]
+}
 
 export default class Geometry {
 
     type : "Point" | "Polygon"
-    coordinates : Position | Position[][] | string
-	constructor(args: string | any[]) {
+    coordinates : Position | Position[][]
+	constructor(type : "Point" | "Polygon", coordinates: Position | Position[][])
+	constructor(type: "BOX", coordinates: number[])
+	constructor(type: "BOX", coordinates: string)
+	constructor(wkt: string)
+	constructor(arg1 : GeometryDict) 
+	constructor(arg1 : string | GeometryDict, coordinates?: Position | number[] | Position[][] | string) {
         // super()
 		// console.log(JSON.stringify({geom_arguments:arguments}))
-		switch(args.length) {
-			case 1:
-				if(typeof(args[0]) === "string") {   // WKT
-					// if(config.verbose) {
-					// 	console.log("reading wkt string geometry")
-					// }
-					try {
-						var geom = wkt.read(args[0]).toJson()
-					} catch(e) {
-						throw new Error(e as string)
-					}
-					this.type = geom.type
-					this.coordinates = geom.coordinates
-				} else {
-					this.type = args[0].type
-					this.coordinates = args[0].coordinates
+		if(typeof arg1 == "string") {
+			if(arg1 == "Point" || arg1 == "Polygon") {
+				if(!coordinates) {
+					throw new Error("Missing coordinates")
 				}
-				break;
-			default:
-				this.type = args[0]
-				this.coordinates = args[1]
-				break;
+				if(typeof coordinates == "string") {
+					throw new Error("Bad type for coordinates: must be Position | Position[]")
+				}
+				this.type = arg1
+				this.coordinates = coordinates
+			} else if(arg1 == "BOX") {
+				if(!coordinates) {
+					throw new Error("Missing coordinates")
+				}
+				this.type = "Polygon"
+				var coords = Array.isArray(coordinates) ? coordinates : coordinates.split(",").map(c=>parseFloat(c))
+				if (isNumberArray(coords)) {                
+					if(coords.length<2) {
+						console.error("Bad bounding box: missing coordinates")
+						throw new Error("Bad bounding box: missing coordinates")
+					} 
+					const coordsDefined: number[] = coords.map((n) => {
+						if (typeof n !== "number" || Number.isNaN(n)) {
+							throw new Error("Bad bounding box: NaN or undefined found in coordinates");
+						}
+						return n;
+					});
+					if(coordsDefined.length == 2) {
+						const [x, y] = coordsDefined
+						if([x, y].some(n => n === undefined)) {
+							throw new Error("Bad bounding box: NaN or undefined found in coordinates")
+						}
+						this.type = "Point"
+						this.coordinates = [ x!, y! ]
+					} else {
+						const [x1, y1, x2, y2] = coordsDefined
+						if([x1, y1, x2, y2].some(n => n === undefined)) {
+							throw new Error("Bad bounding box: NaN or undefined found in coordinates")
+						}
+						this.coordinates = [ [ [ x1!, y1! ], [ x1!, y2! ], [ x2!, y2! ], [ x2!, y1! ], [ x1!, y1! ] ] ]
+					}
+				} else {
+					throw new Error("Bad bounding box: must be an array of numbers")
+				}
+				// console.log(JSON.stringify(this)) 
+			} else {
+				// WKT
+				try {
+					var geom = wkt.read(arg1).toJson()
+				} catch(e) {
+					if(e instanceof Error) {
+						throw new Error("Invalid WKT geometry: " + e.message)
+					} else {
+						throw new Error("Invalid WKT geometry")
+					}
+				}
+				this.type = geom.type
+				this.coordinates = geom.coordinates
+			}
+		} else {
+			this.type = arg1.type
+			this.coordinates = arg1.coordinates
 		}
 		if(!this.type) {
 			throw new Error("Invalid geometry: missing type")
 		}
 		if(!this.coordinates) {
 			throw new Error("Invalid geometry: missing coordinates")
-		}
+		}		
 		
-		if(this.type.toUpperCase() == "BOX") {
-			this.type = "Polygon"
-			var coords = Array.isArray(this.coordinates) ? this.coordinates : this.coordinates.split(",").map(c=>parseFloat(c))
-            if (isNumberArray(coords)) {                
-                if(coords.length<2) {
-                    console.error("Bad bounding box: missing coordinates")
-                    throw new Error("Bad bounding box: missing coordinates")
-                } 
-                const coordsDefined: number[] = coords.map((n) => {
-                    if (typeof n !== "number" || Number.isNaN(n)) {
-                        throw new Error("Bad bounding box: NaN or undefined found in coordinates");
-                    }
-                    return n;
-                });
-                if(coordsDefined.length == 2) {
-                    const [x, y] = coordsDefined
-                    if([x, y].some(n => n === undefined)) {
-                        throw new Error("Bad bounding box: NaN or undefined found in coordinates")
-                    }
-                    this.type = "Point"
-                    this.coordinates = [ x!, y! ]
-                } else {
-                    const [x1, y1, x2, y2] = coordsDefined
-                    if([x1, y1, x2, y2].some(n => n === undefined)) {
-                        throw new Error("Bad bounding box: NaN or undefined found in coordinates")
-                    }
-                    this.coordinates =  [ [ [ x1!, y1! ], [ x1!, y2! ], [ x2!, y2! ], [ x2!, y1! ], [ x1!, y1! ] ] ]
-                }
-            } else {
-                throw new Error("Bad bounding box: must be an array of numbers")
-            }
-			// console.log(JSON.stringify(this))
-		} 
 		if(!geojsonValidation.isGeometryObject({type: capitalize_initial(this.type), coordinates: this.coordinates})) {
 			throw new Error("Invalid geometry")
 		}
-
 	}
+	
     getGeom() : Point | Polygon {
         const coords = this.coordinates
         if(coords instanceof String) {
@@ -111,7 +127,7 @@ export default class Geometry {
         }
         else if(this.type == "Polygon") {
             if(!isArrayOfArrayOfNumberArray(coords)) {
-                throw new Error("Invalid coordinates dimensions for MultiPolygon geometry")
+                throw new Error("Invalid coordinates dimensions for Polygon geometry")
             }
             return {
                 type: this.type,

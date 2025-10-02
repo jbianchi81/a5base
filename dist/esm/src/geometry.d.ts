@@ -1,8 +1,16 @@
 import { Point, Polygon, Position } from 'geojson';
+interface GeometryDict {
+    type: "Point" | "Polygon" | "Multipolygon";
+    coordinates: Position | Position[][];
+}
 export default class Geometry {
-    type: "Point" | "Polygon";
-    coordinates: Position | Position[][] | string;
-    constructor(args: string | any[]);
+    type: "Point" | "Polygon" | "Multipolygon";
+    coordinates: Position | Position[][];
+    constructor(type: "Point" | "Polygon" | "Multipolygon", coordinates: Position | Position[][]);
+    constructor(type: "BOX", coordinates: number[]);
+    constructor(type: "BOX", coordinates: string);
+    constructor(wkt: string);
+    constructor(arg1: GeometryDict);
     getGeom(): Point | Polygon;
     toString(): any;
     toCSV(): any;
@@ -10,3 +18,4 @@ export default class Geometry {
     toGeoJSON(properties?: any): import("geojson").Feature<Point | Polygon, any>;
     bbox(): import("geojson").BBox;
 }
+export {};

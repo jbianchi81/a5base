@@ -13,74 +13,79 @@ function isArrayOfArrayOfNumberArray(value) {
     return Array.isArray(value) && value.every(item => isArrayOfNumberArray(typeof item === "number"));
 }
 export default class Geometry {
-    constructor(args) {
+    constructor(arg1, coordinates) {
         // super()
         // console.log(JSON.stringify({geom_arguments:arguments}))
-        switch (args.length) {
-            case 1:
-                if (typeof (args[0]) === "string") { // WKT
-                    // if(config.verbose) {
-                    // 	console.log("reading wkt string geometry")
-                    // }
-                    try {
-                        var geom = wkt.read(args[0]).toJson();
+        if (typeof arg1 == "string") {
+            if (arg1 == "Point" || arg1 == "Polygon" || arg1 == "Multipolygon") {
+                if (!coordinates) {
+                    throw new Error("Missing coordinates");
+                }
+                if (typeof coordinates == "string") {
+                    throw new Error("Bad type for coordinates: must be Position | Position[]");
+                }
+                this.type = arg1;
+                this.coordinates = coordinates;
+            }
+            else if (arg1 == "BOX") {
+                if (!coordinates) {
+                    throw new Error("Missing coordinates");
+                }
+                this.type = "Polygon";
+                var coords = Array.isArray(coordinates) ? coordinates : coordinates.split(",").map(c => parseFloat(c));
+                if (isNumberArray(coords)) {
+                    if (coords.length < 2) {
+                        console.error("Bad bounding box: missing coordinates");
+                        throw new Error("Bad bounding box: missing coordinates");
                     }
-                    catch (e) {
-                        throw new Error(e);
+                    const coordsDefined = coords.map((n) => {
+                        if (typeof n !== "number" || Number.isNaN(n)) {
+                            throw new Error("Bad bounding box: NaN or undefined found in coordinates");
+                        }
+                        return n;
+                    });
+                    if (coordsDefined.length == 2) {
+                        const [x, y] = coordsDefined;
+                        if ([x, y].some(n => n === undefined)) {
+                            throw new Error("Bad bounding box: NaN or undefined found in coordinates");
+                        }
+                        this.type = "Point";
+                        this.coordinates = [x, y];
                     }
-                    this.type = geom.type;
-                    this.coordinates = geom.coordinates;
+                    else {
+                        const [x1, y1, x2, y2] = coordsDefined;
+                        if ([x1, y1, x2, y2].some(n => n === undefined)) {
+                            throw new Error("Bad bounding box: NaN or undefined found in coordinates");
+                        }
+                        this.coordinates = [[[x1, y1], [x1, y2], [x2, y2], [x2, y1], [x1, y1]]];
+                    }
                 }
                 else {
-                    this.type = args[0].type;
-                    this.coordinates = args[0].coordinates;
+                    throw new Error("Bad bounding box: must be an array of numbers");
                 }
-                break;
-            default:
-                this.type = args[0];
-                this.coordinates = args[1];
-                break;
+                // console.log(JSON.stringify(this)) 
+            }
+            else {
+                // WKT
+                try {
+                    var geom = wkt.read(arg1[0]).toJson();
+                }
+                catch (e) {
+                    throw new Error(e);
+                }
+                this.type = geom.type;
+                this.coordinates = geom.coordinates;
+            }
+        }
+        else {
+            this.type = arg1.type;
+            this.coordinates = arg1.coordinates;
         }
         if (!this.type) {
             throw new Error("Invalid geometry: missing type");
         }
         if (!this.coordinates) {
             throw new Error("Invalid geometry: missing coordinates");
-        }
-        if (this.type.toUpperCase() == "BOX") {
-            this.type = "Polygon";
-            var coords = Array.isArray(this.coordinates) ? this.coordinates : this.coordinates.split(",").map(c => parseFloat(c));
-            if (isNumberArray(coords)) {
-                if (coords.length < 2) {
-                    console.error("Bad bounding box: missing coordinates");
-                    throw new Error("Bad bounding box: missing coordinates");
-                }
-                const coordsDefined = coords.map((n) => {
-                    if (typeof n !== "number" || Number.isNaN(n)) {
-                        throw new Error("Bad bounding box: NaN or undefined found in coordinates");
-                    }
-                    return n;
-                });
-                if (coordsDefined.length == 2) {
-                    const [x, y] = coordsDefined;
-                    if ([x, y].some(n => n === undefined)) {
-                        throw new Error("Bad bounding box: NaN or undefined found in coordinates");
-                    }
-                    this.type = "Point";
-                    this.coordinates = [x, y];
-                }
-                else {
-                    const [x1, y1, x2, y2] = coordsDefined;
-                    if ([x1, y1, x2, y2].some(n => n === undefined)) {
-                        throw new Error("Bad bounding box: NaN or undefined found in coordinates");
-                    }
-                    this.coordinates = [[[x1, y1], [x1, y2], [x2, y2], [x2, y1], [x1, y1]]];
-                }
-            }
-            else {
-                throw new Error("Bad bounding box: must be an array of numbers");
-            }
-            // console.log(JSON.stringify(this))
         }
         if (!geojsonValidation.isGeometryObject({ type: capitalize_initial(this.type), coordinates: this.coordinates })) {
             throw new Error("Invalid geometry");
