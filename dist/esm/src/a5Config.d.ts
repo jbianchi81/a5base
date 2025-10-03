@@ -10,7 +10,7 @@ interface LogPoolUsageConfig {
     activate: boolean;
     interval: number;
 }
-export default interface A5Config {
+export interface A5Config {
     database?: DBConfig;
     log_pool_usage?: LogPoolUsageConfig;
 }

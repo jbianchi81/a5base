@@ -4,7 +4,7 @@ import YAML from 'yaml';
 import { parse, stringify } from 'csv-string';
 import { isIterable, delay, control_filter2 } from './utils';
 import { createInterval, interval2string } from './timeSteps';
-import Geometry from './geometry';
+import { Geometry } from './geometry';
 import setGlobal from './setGlobal';
 const g = setGlobal();
 ;

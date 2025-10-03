@@ -1,9 +1,9 @@
 import { Point, Polygon, Position } from 'geojson';
-interface GeometryDict {
+export interface GeometryDict {
     type: "Point" | "Polygon";
     coordinates: Position | Position[][];
 }
-export default class Geometry {
+export declare class Geometry {
     type: "Point" | "Polygon";
     coordinates: Position | Position[][];
     constructor(type: "Point" | "Polygon", coordinates: Position | Position[][]);
@@ -18,4 +18,3 @@ export default class Geometry {
     toGeoJSON(properties?: any): import("geojson").Feature<Point | Polygon, any>;
     bbox(): import("geojson").BBox;
 }
-export {};

@@ -11,7 +11,7 @@ const yaml_1 = __importDefault(require("yaml"));
 const csv_string_1 = require("csv-string");
 const utils_1 = require("./utils");
 const timeSteps_1 = require("./timeSteps");
-const geometry_1 = __importDefault(require("./geometry"));
+const geometry_1 = require("./geometry");
 const setGlobal_1 = __importDefault(require("./setGlobal"));
 const g = (0, setGlobal_1.default)();
 ;
@@ -261,7 +261,7 @@ class baseModel {
                     else {
                         obj = value;
                     }
-                    return new geometry_1.default(obj);
+                    return new geometry_1.Geometry(obj);
                 }
                 else if (definition.type == "timestamp") {
                     return new Date(value.toString());

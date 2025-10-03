@@ -36,6 +36,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
+exports.Geometry = void 0;
 const wicket_1 = __importDefault(require("wicket"));
 const wkt = new wicket_1.default.Wkt();
 const bbox_1 = __importDefault(require("@turf/bbox"));
@@ -215,7 +216,7 @@ class Geometry {
         return (0, bbox_1.default)(geom);
     }
 }
-exports.default = Geometry;
+exports.Geometry = Geometry;
 function capitalize_initial(str) {
     if (!str)
         return str;

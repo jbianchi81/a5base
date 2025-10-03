@@ -1,6 +1,6 @@
 import assert from "assert";
-const test = require('node:test');
-import Geometry from '../src/geometry';
+import test from 'node:test';
+import { Geometry } from '../src/geometry';
 test('2args', async () => {
     const geom = new Geometry("Point", [0, 1]);
     assert.equal(geom.type, "Point");

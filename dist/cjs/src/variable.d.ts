@@ -15,7 +15,7 @@ export interface VariableFields {
     timeSupport?: Interval;
     def_hora_corte?: Interval;
 }
-export default class Variable extends baseModel {
+export declare class Variable extends baseModel {
     id: number | undefined;
     var: string | undefined;
     nombre?: string | undefined;

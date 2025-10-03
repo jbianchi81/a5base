@@ -1,7 +1,7 @@
 import { baseModel } from './baseModel';
 import { interval2string } from './timeSteps';
 import { control_filter2, pasteIntoSQLQuery } from './utils';
-class Variable extends baseModel {
+export class Variable extends baseModel {
     constructor(args) {
         super(args);
     }
@@ -245,4 +245,3 @@ Variable._fields = {
     timeSupport: { type: "interval" },
     def_hora_corte: { type: "interval" }
 };
-export default Variable;

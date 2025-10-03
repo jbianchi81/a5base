@@ -19,12 +19,12 @@ function isArrayOfArrayOfNumberArray(value: unknown): value is number[][][] {
   return Array.isArray(value) && value.every(item => isArrayOfNumberArray(item));
 }
 
-interface GeometryDict {
+export interface GeometryDict {
 	type: "Point" | "Polygon"
     coordinates : Position | Position[][]
 }
 
-export default class Geometry {
+export class Geometry {
 
     type : "Point" | "Polygon"
     coordinates : Position | Position[][]

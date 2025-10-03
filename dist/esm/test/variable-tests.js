@@ -1,6 +1,6 @@
 import assert from "assert";
-const test = require('node:test');
-import Variable from '../src/variable';
+import test from 'node:test';
+import { Variable } from '../src/variable';
 assert.equal(Object.keys(Variable._fields).length, 13);
 const variable = new Variable({ nombre: "aaa" });
 assert.equal(variable.nombre, "aaa");

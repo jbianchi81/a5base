@@ -1,5 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
+exports.Variable = void 0;
 const baseModel_1 = require("./baseModel");
 const timeSteps_1 = require("./timeSteps");
 const utils_1 = require("./utils");
@@ -231,6 +232,7 @@ class Variable extends baseModel_1.baseModel {
         }
     }
 }
+exports.Variable = Variable;
 Variable._table_name = "var";
 Variable._fields = {
     id: { type: "integer", primary_key: true },
@@ -247,4 +249,3 @@ Variable._fields = {
     timeSupport: { type: "interval" },
     def_hora_corte: { type: "interval" }
 };
-exports.default = Variable;

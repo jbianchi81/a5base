@@ -1,13 +1,10 @@
 "use strict";
-var __importDefault = (this && this.__importDefault) || function (mod) {
-    return (mod && mod.__esModule) ? mod : { "default": mod };
-};
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.delay = delay;
 exports.isIterable = isIterable;
 exports.control_filter2 = control_filter2;
 exports.pasteIntoSQLQuery = pasteIntoSQLQuery;
-const geometry_1 = __importDefault(require("./geometry"));
+const geometry_1 = require("./geometry");
 const timeSteps_1 = require("./timeSteps");
 const pg_1 = require("pg");
 async function delay(t, val) {
@@ -110,7 +107,7 @@ function control_filter2(valid_filters, filter, default_table, crud, throw_on_er
                     }
                 }
                 else if (valid_filter.type == "geometry") {
-                    if (filter[key] instanceof geometry_1.default) {
+                    if (filter[key] instanceof geometry_1.Geometry) {
                         const geom = filter[key];
                         filter_string += "  AND ST_Distance(st_transform(" + fullkey + ",4326),st_transform(" + geom.toSQL() + ",4326)) < 0.001";
                     }

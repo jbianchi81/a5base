@@ -1,4 +1,4 @@
-import Geometry from './geometry';
+import { Geometry } from './geometry';
 import { createInterval } from './timeSteps';
 import { escapeLiteral } from 'pg';
 export async function delay(t, val) {

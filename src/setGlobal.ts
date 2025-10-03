@@ -1,7 +1,7 @@
 import { Pool } from 'pg'
 import path from 'path'
 import config from 'config';
-import A5Config from './a5Config'
+import {A5Config} from './a5Config'
         
         
 interface Global {
