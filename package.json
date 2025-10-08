@@ -2,7 +2,7 @@
   "type": "module",
   "name": "a5base",
   "license": "MIT",
-  "version": "1.0.3",
+  "version": "1.0.4",
   "description": "a5 base model",
   "exports": {
     "./userAdmin": {
@@ -19,27 +19,27 @@
     },
     "./utils": {
       "import": "./dist/esm/src/utils.js",
-      "require": "./dist/cjs/src/utils.js" 
+      "require": "./dist/cjs/src/utils.js"
     },
     "./timeSteps": {
       "import": "./dist/esm/src/timeSteps.js",
-      "require": "./dist/cjs/src/timeSteps.js" 
+      "require": "./dist/cjs/src/timeSteps.js"
     },
     "./setGlobal": {
       "import": "./dist/esm/src/setGlobal.js",
-      "require": "./dist/cjs/src/setGlobal.js" 
+      "require": "./dist/cjs/src/setGlobal.js"
     },
     "./geometry": {
       "import": "./dist/esm/src/geometry.js",
-      "require": "./dist/cjs/src/geometry.js" 
+      "require": "./dist/cjs/src/geometry.js"
     },
     "./variable": {
       "import": "./dist/esm/src/variable.js",
-      "require": "./dist/cjs/src/variable.js" 
+      "require": "./dist/cjs/src/variable.js"
     },
     "./a5Config": {
       "import": "./dist/esm/src/a5Config.js",
-      "require": "./dist/cjs/src/a5Config.js" 
+      "require": "./dist/cjs/src/a5Config.js"
     }
   },
   "main": "./dist/cjs/src/index.js",
