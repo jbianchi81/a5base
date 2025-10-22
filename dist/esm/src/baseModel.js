@@ -72,7 +72,7 @@ export function readModelFromFile(model_class, input_file, input_format, options
             parsed_content = parsed_content[options.property_name];
         }
         if (model_class.prototype instanceof Array) {
-            return new model_class(parsed_content);
+            return new model_class(...parsed_content);
         }
         else if (Array.isArray(parsed_content)) {
             return parsed_content.map(r => new model_class(r));
