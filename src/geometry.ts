@@ -19,21 +19,67 @@ function isArrayOfArrayOfNumberArray(value: unknown): value is number[][][] {
   return Array.isArray(value) && value.every(item => isArrayOfNumberArray(item));
 }
 
-export interface GeometryDict {
-	type: "Point" | "Polygon"
-    coordinates : Position | Position[][]
+export interface PointGeometry {
+  type: "Point"
+  coordinates: Position
 }
+
+export interface MultiPointGeometry {
+  type: "MultiPoint"
+  coordinates: Position[]
+}
+
+export interface LineStringGeometry {
+  type: "LineString"
+  coordinates: Position[]
+}
+
+export interface MultiLineStringGeometry {
+  type: "MultiLineString"
+  coordinates: Position[][]
+}
+
+export interface PolygonGeometry {
+  type: "Polygon"
+  coordinates: Position[][]
+}
+
+export interface MultiPolygonGeometry {
+  type: "MultiPolygon"
+  coordinates: Position[][][]
+}
+
+export interface GeometryCollection {
+  type: "GeometryCollection"
+  geometries: GeometryDict[]
+}
+
+/** All valid GeoJSON geometries */
+export type GeometryDict =
+  | PointGeometry
+  | MultiPointGeometry
+  | LineStringGeometry
+  | MultiLineStringGeometry
+  | PolygonGeometry
+  | MultiPolygonGeometry
+//   | GeometryCollection
+
+
+// export interface GeometryDict {
+// 	type: "Point" | "Polygon"
+//     coordinates : Position | Position[][]
+// }
 
 export class Geometry {
 
-    type : "Point" | "Polygon"
-    coordinates : Position | Position[][]
-	constructor(type : "Point" | "Polygon", coordinates: Position | Position[][])
+    type : "Point" | "MultiPoint" | "LineString" | "MultiLineString"  | "Polygon" | "MultiPolygon"
+    coordinates : Position | Position[] | Position[][] | Position[][][]
+	constructor(type : "Point" | "MultiPoint" | "LineString" | "MultiLineString"  | "Polygon" | "MultiPolygon" , coordinates: Position | Position[] | Position[][] | Position[][][])
 	constructor(type: "BOX", coordinates: number[])
 	constructor(type: "BOX", coordinates: string)
 	constructor(wkt: string)
 	constructor(arg1 : GeometryDict) 
-	constructor(arg1 : string | GeometryDict, coordinates?: Position | number[] | Position[][] | string) {
+	constructor(arg1 : string | GeometryDict, coordinates?: Position | number[] | Position[] | Position[][] | Position[][][] | string) {
         // super()
 		// console.log(JSON.stringify({geom_arguments:arguments}))
 		if(typeof arg1 == "string") {
