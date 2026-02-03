@@ -51,6 +51,11 @@ function isArrayOfNumberArray(value) {
 function isArrayOfArrayOfNumberArray(value) {
     return Array.isArray(value) && value.every(item => isArrayOfNumberArray(item));
 }
+//   | GeometryCollection
+// export interface GeometryDict {
+// 	type: "Point" | "Polygon"
+//     coordinates : Position | Position[][]
+// }
 class Geometry {
     constructor(arg1, coordinates) {
         // super()

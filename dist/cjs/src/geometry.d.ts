@@ -1,12 +1,38 @@
 import { Point, Polygon, Position } from 'geojson';
-export interface GeometryDict {
-    type: "Point" | "Polygon";
-    coordinates: Position | Position[][];
+export interface PointGeometry {
+    type: "Point";
+    coordinates: Position;
 }
+export interface MultiPointGeometry {
+    type: "MultiPoint";
+    coordinates: Position[];
+}
+export interface LineStringGeometry {
+    type: "LineString";
+    coordinates: Position[];
+}
+export interface MultiLineStringGeometry {
+    type: "MultiLineString";
+    coordinates: Position[][];
+}
+export interface PolygonGeometry {
+    type: "Polygon";
+    coordinates: Position[][];
+}
+export interface MultiPolygonGeometry {
+    type: "MultiPolygon";
+    coordinates: Position[][][];
+}
+export interface GeometryCollection {
+    type: "GeometryCollection";
+    geometries: GeometryDict[];
+}
+/** All valid GeoJSON geometries */
+export type GeometryDict = PointGeometry | MultiPointGeometry | LineStringGeometry | MultiLineStringGeometry | PolygonGeometry | MultiPolygonGeometry;
 export declare class Geometry {
-    type: "Point" | "Polygon";
-    coordinates: Position | Position[][];
-    constructor(type: "Point" | "Polygon", coordinates: Position | Position[][]);
+    type: "Point" | "MultiPoint" | "LineString" | "MultiLineString" | "Polygon" | "MultiPolygon";
+    coordinates: Position | Position[] | Position[][] | Position[][][];
+    constructor(type: "Point" | "MultiPoint" | "LineString" | "MultiLineString" | "Polygon" | "MultiPolygon", coordinates: Position | Position[] | Position[][] | Position[][][]);
     constructor(type: "BOX", coordinates: number[]);
     constructor(type: "BOX", coordinates: string);
     constructor(wkt: string);

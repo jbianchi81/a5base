@@ -270,18 +270,30 @@ export class Authentication {
                 }
             }
             if (!req.user) {
+                if (this.config.verbose) {
+                    console.debug("User not set, redirecting");
+                }
                 res.redirect(this.redirect_url + '?redirected=true&path=' + path);
                 return;
             }
             if (!req.user.authenticated) {
+                if (this.config.verbose) {
+                    console.debug("User not authenticated, redirecting");
+                }
                 res.redirect(this.redirect_url + '?redirected=true&path=' + path);
                 return;
             }
             else if (req.user.role != "writer" && req.user.role != "admin") {
+                if (this.config.verbose) {
+                    console.debug("User role not writer or admin, setting writer=false");
+                }
                 req.query.writer = 'false';
                 req.query.authenticated = 'true';
             }
             else {
+                if (this.config.verbose) {
+                    console.debug("User role is writer or admin, setting writer=true");
+                }
                 req.query.writer = 'true';
                 req.query.authenticated = 'true';
             }
@@ -314,20 +326,32 @@ export class Authentication {
                 }
             }
             if (!req.user) {
+                if (this.config.verbose) {
+                    console.debug("User not set, setting writer=false, authenticated=false");
+                }
                 req.query.public = 'true';
                 req.query.writer = 'false';
                 req.query.authenticated = 'false';
             }
             else if (!req.user.authenticated) {
+                if (this.config.verbose) {
+                    console.debug("User not authenticated, setting writer=false, authenticated=false");
+                }
                 req.query.public = 'true';
                 req.query.writer = 'false';
                 req.query.authenticated = 'false';
             }
             else if (req.user.role != "writer" && req.user.role != "admin") {
+                if (this.config.verbose) {
+                    console.debug("User role not writer or admin, setting writer=false, authenticated=true");
+                }
                 req.query.writer = 'false';
                 req.query.authenticated = 'true';
             }
             else {
+                if (this.config.verbose) {
+                    console.debug("User role is writer or admin, setting writer=true, authenticated=true");
+                }
                 req.query.writer = 'true';
                 req.query.authenticated = 'true';
             }
