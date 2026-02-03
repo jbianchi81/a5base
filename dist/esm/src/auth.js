@@ -182,14 +182,10 @@ export class Authentication {
             if (this.config.rest.skip_authentication) {
                 return next();
             }
+            res.locals = res.locals || {};
             if (this.config.rest.restricted) {
                 if (req.user && req.user.role == "public") {
-                    if (req.query) {
-                        req.query.public = 'true';
-                    }
-                    else {
-                        req.query = { public: 'true' };
-                    }
+                    res.locals.public = 'true';
                 }
                 return this.isAuthenticated(req, res, next);
             }
@@ -213,24 +209,15 @@ export class Authentication {
                     console.debug("isPublic req.user:" + JSON.stringify(req.user));
                 }
             }
+            res.locals = res.locals || {};
             if (!req.user || req.user.role == "public") {
-                if (req.query) {
-                    req.query.public = 'true';
-                }
-                else {
-                    req.query = { public: 'true' };
-                }
+                res.locals.public = 'true';
             }
             else if (!req.user.authenticated) {
-                if (req.query) {
-                    req.query.public = 'true';
-                }
-                else {
-                    req.query = { public: 'true' };
-                }
+                res.locals.public = 'true';
             }
             if (this.config.verbose) {
-                console.debug("isPublic req.query:" + JSON.stringify(req.query));
+                console.debug("isPublic req.query:" + JSON.stringify(req.query) + ", locals:" + JSON.stringify(res.locals));
             }
             logRequest(req);
             return next();
@@ -269,6 +256,7 @@ export class Authentication {
                     console.debug("isAuthenticatedView:" + JSON.stringify(user));
                 }
             }
+            res.locals = res.locals || {};
             if (!req.user) {
                 if (this.config.verbose) {
                     console.debug("User not set, redirecting");
@@ -287,30 +275,29 @@ export class Authentication {
                 if (this.config.verbose) {
                     console.debug("User role not writer or admin, setting writer=false");
                 }
-                req.query.writer = 'false';
-                req.query.authenticated = 'true';
+                res.locals.writer = 'false';
+                res.locals.authenticated = 'true';
             }
             else {
                 if (this.config.verbose) {
                     console.debug("User role is writer or admin, setting writer=true");
                 }
-                req.query.writer = 'true';
-                req.query.authenticated = 'true';
+                res.locals.writer = 'true';
+                res.locals.authenticated = 'true';
             }
             logRequest(req);
             return next();
         };
         this.isPublicView = async (req, res, next) => {
+            res.locals = res.locals || {};
             if (this.config.rest.skip_authentication) {
-                req.query.writer = 'true';
+                res.locals.writer = 'true';
                 return next();
             }
             if (this.config.rest.restricted) {
                 return this.isAuthenticatedView(req, res, next);
             }
-            if (!req.query) {
-                req.query = {};
-            }
+            res.locals = res.locals || {};
             try {
                 var user = await this.extractAndValidateToken(req); // try authentication by token (overrides session)
             }
@@ -329,31 +316,31 @@ export class Authentication {
                 if (this.config.verbose) {
                     console.debug("User not set, setting writer=false, authenticated=false");
                 }
-                req.query.public = 'true';
-                req.query.writer = 'false';
-                req.query.authenticated = 'false';
+                res.locals.public = 'true';
+                res.locals.writer = 'false';
+                res.locals.authenticated = 'false';
             }
             else if (!req.user.authenticated) {
                 if (this.config.verbose) {
                     console.debug("User not authenticated, setting writer=false, authenticated=false");
                 }
-                req.query.public = 'true';
-                req.query.writer = 'false';
-                req.query.authenticated = 'false';
+                res.locals.public = 'true';
+                res.locals.writer = 'false';
+                res.locals.authenticated = 'false';
             }
             else if (req.user.role != "writer" && req.user.role != "admin") {
                 if (this.config.verbose) {
                     console.debug("User role not writer or admin, setting writer=false, authenticated=true");
                 }
-                req.query.writer = 'false';
-                req.query.authenticated = 'true';
+                res.locals.writer = 'false';
+                res.locals.authenticated = 'true';
             }
             else {
                 if (this.config.verbose) {
                     console.debug("User role is writer or admin, setting writer=true, authenticated=true");
                 }
-                req.query.writer = 'true';
-                req.query.authenticated = 'true';
+                res.locals.writer = 'true';
+                res.locals.authenticated = 'true';
             }
             logRequest(req);
             return next();
